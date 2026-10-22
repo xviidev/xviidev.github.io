@@ -1,15 +1,16 @@
 ---
+import { buttonVariants } from '@xviidev/ui/components/button';
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout>
   <section id="tentang" aria-labelledby="intro-title">
-    <p class="mb-4 text-xs text-neutral-500">Ismail / Sinjai, Indonesia</p>
+    <p class="mb-4 text-xs text-muted-foreground">Ismail / Sinjai, Indonesia</p>
     <h1 class="mb-6 max-w-lg text-xl leading-relaxed font-normal sm:text-2xl" id="intro-title">Berangkat dari seni rupa.<br />Berkarya lewat kode.</h1>
-    <div class="space-y-4 text-neutral-600">
+    <div class="flex flex-col gap-4 text-muted-foreground">
       <p>Saya Ismail, seorang full stack web developer dengan latar pendidikan seni rupa. Komposisi, ruang, dan detail adalah bagian dari cara saya melihat sesuatu — termasuk saat membangun sebuah website.</p>
       <p>Kini, kanvas saya juga berupa layar. Saya merancang antarmuka, menulis kode, dan mengembangkan ide menjadi sesuatu yang bisa digunakan. Saya suka hal yang sederhana, punya karakter, dan dibuat dengan sungguh-sungguh.</p>
     </div>
-    <a class="mt-6 inline-flex items-center gap-4 bg-neutral-900 px-4 py-2.5 text-xs text-white hover:bg-neutral-700" href="https://wa.me/6285256963668?text=Halo%20Ismail%2C%20saya%20ingin%20membahas%20proyek.">
+    <a class:list={[buttonVariants(), "mt-6 gap-4"]} href="https://wa.me/6285256963668?text=Halo%20Ismail%2C%20saya%20ingin%20membahas%20proyek.">
       Mari bekerja sama <span aria-hidden="true">↗</span>
     </a>
   </section>

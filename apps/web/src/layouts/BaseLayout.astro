@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+interface Props { title?: string; description?: string; wide?: boolean; }
+const {
+  title = 'Ismail — XVII Dev',
+  description = 'Berangkat dari seni rupa, berkarya lewat kode. Ismail, full stack web developer di Sinjai. Pembuat Pixerve dan Evetry.',
+} = Astro.props;
+const { wide = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+<!doctype html>
+<html lang="id" class="scheme-light bg-background text-foreground">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <link rel="icon" type="image/png" href="/favicon-32x32.png" />
+  </head>
+  <body class="font-mono text-sm leading-[1.85] font-normal [font-synthesis:none]">
+    <a class="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-6 focus:bg-background" href="#main">Langsung ke konten</a>
+    <div class:list={["mx-auto my-10 px-6 min-[601px]:my-20", wide ? "max-w-7xl" : "max-w-[720px]"]}>
+      <header class="mb-12 flex flex-wrap items-center justify-between gap-6 border-b border-border pb-6">
+        <a class="inline-block" href="/" aria-label="XVII Dev — Beranda">
+          <img src="/assets/logo.svg" class="block size-11" width="44" height="44" alt="Logo XVII Dev" />
+        </a>
+        <nav aria-label="Navigasi utama" class="flex items-center gap-4 text-xs text-muted-foreground sm:gap-6">
+          <a class="hover:text-foreground" href="/#tentang">Tentang</a>
+          <a class="hover:text-foreground" href="/#proyek">Proyek</a>
+          <a class="hover:text-foreground aria-[current=page]:text-foreground" href="/utilitas/" aria-current={Astro.url.pathname.startsWith('/utilitas') ? 'page' : undefined}>Utilitas</a>
+        </nav>
+      </header>
+      <main id="main"><slot /></main>
+      <footer class="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-xs text-muted-foreground"><span>XVII Dev</span><a class="underline underline-offset-4 hover:no-underline hover:text-foreground" href="https://github.com/xviidev">GitHub</a></footer>
+    </div>
+  </body>
+</html>
+
+
