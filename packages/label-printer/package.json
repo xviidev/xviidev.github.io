@@ -30,6 +30,7 @@
   },
   "exports": {
     ".": "./src/index.tsx",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./metadata": "./src/metadata.ts"
   }
 }

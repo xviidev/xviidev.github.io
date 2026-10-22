@@ -1,7 +1,7 @@
 import { ToggleGroup, ToggleGroupItem } from '@xviidev/ui/components/toggle-group'
 import { Button } from '@xviidev/ui/components/button'
-import { NativeSelect, NativeSelectOption } from '@xviidev/ui/components/native-select'
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { SelectInput } from '@xviidev/ui/components/select-input'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -11,8 +11,8 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getSelectionStyleValueForProperty, $patchStyleText } from '@lexical/selection'
 import { mergeRegister } from '@lexical/utils'
-import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, SELECTION_CHANGE_COMMAND, UNDO_COMMAND } from 'lexical'
-import type { LexicalNode } from 'lexical'
+import { $setSelection, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, SELECTION_CHANGE_COMMAND, UNDO_COMMAND } from 'lexical'
+import type { LexicalNode, RangeSelection } from 'lexical'
 import type { RichDocument, RichLine, RichRun, Weight } from '../lib/rich-text'
 
 export interface RichTextHandle { insertText: (text: string) => void }
@@ -49,6 +49,7 @@ function readDocument(): RichDocument {
 
 const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
   const [editor] = useLexicalComposerContext()
+  const savedSelection = useRef<RangeSelection | null>(null)
   const [bold, setBold] = useState(false), [italic, setItalic] = useState(false), [underline, setUnderline] = useState(false)
   const [align, setAlign] = useState('left')
   const [weight, setWeight] = useState('400'), [size, setSize] = useState('')
@@ -65,6 +66,7 @@ const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
     const update = () => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
+      savedSelection.current = selection.clone()
       const node = selection.anchor.getNode(); const paragraph = $isElementNode(node) ? node : node.getParent()
       setAlign(paragraph?.getFormatType() || 'left')
       setBold(selection.hasFormat('bold')); setItalic(selection.hasFormat('italic')); setUnderline(selection.hasFormat('underline'))
@@ -89,14 +91,15 @@ const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
   }, [editor])
   function style(property: string, value: string | null) {
     editor.update(() => {
-      const selection = $getSelection()
+      let selection = $getSelection()
+      if (!$isRangeSelection(selection) && savedSelection.current) { selection = savedSelection.current.clone();$setSelection(selection) }
       if ($isRangeSelection(selection)) {
         if (property === 'font-weight' && selection.hasFormat('bold')) selection.formatText('bold')
         if (property === 'font-weight' && value === '700') { selection.formatText('bold'); $patchStyleText(selection, { 'font-weight': null }) }
         else $patchStyleText(selection, { [property]: value })
       }
     })
-    editor.focus()
+    requestAnimationFrame(()=>editor.focus())
   }
   return <div className="rich-toolbar" role="toolbar" aria-label="Format teks">
     <ToggleGroup multiple size="sm" value={[...(bold || weight === '700' ? ['bold'] : []), ...(italic ? ['italic'] : []), ...(underline ? ['underline'] : [])]} onValueChange={values => {
@@ -109,12 +112,8 @@ const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
       <ToggleGroupItem value="italic" aria-label="Miring" title="Miring (Ctrl+I)" onMouseDown={event => event.preventDefault()}><em>I</em></ToggleGroupItem>
       <ToggleGroupItem value="underline" aria-label="Garis bawah" title="Garis bawah (Ctrl+U)" onMouseDown={event => event.preventDefault()}><u>U</u></ToggleGroupItem>
     </ToggleGroup>
-    <NativeSelect size="sm" aria-label="Ketebalan teks terpilih" value={weight} onChange={event => style('font-weight', event.target.value)}>
-      <NativeSelectOption value="300">Tipis</NativeSelectOption><NativeSelectOption value="400">Normal</NativeSelectOption><NativeSelectOption value="500">Sedang</NativeSelectOption><NativeSelectOption value="600">Semitebal</NativeSelectOption><NativeSelectOption value="700">Tebal</NativeSelectOption>
-    </NativeSelect>
-    <NativeSelect size="sm" aria-label="Ukuran teks terpilih" value={size} onChange={event => style('font-size', event.target.value ? `${event.target.value}pt` : null)}>
-      <NativeSelectOption value="">Ukuran dasar</NativeSelectOption>{[6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 32, 48, 72].map(size => <NativeSelectOption key={size} value={size}>{size} pt</NativeSelectOption>)}
-    </NativeSelect>
+    <SelectInput size="sm" label="Ketebalan teks terpilih" value={weight} onValueChange={value=>style('font-weight',value)} options={[{value:'300',label:'Tipis'},{value:'400',label:'Normal'},{value:'500',label:'Sedang'},{value:'600',label:'Semitebal'},{value:'700',label:'Tebal'}]} />
+    <SelectInput size="sm" label="Ukuran teks terpilih" value={size || 'base'} onValueChange={value=>style('font-size',value==='base'?null:`${value}pt`)} options={[{value:'base',label:'Ukuran dasar'},...[6,7,8,9,10,11,12,14,16,18,20,24,32,48,72].map(size=>({value:String(size),label:`${size} pt`}))]} />
     <ToggleGroup size="sm" value={[align]} onValueChange={values => { const value = values[0]; if (value === 'left' || value === 'center' || value === 'right') editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value) }}>
       {(['left', 'center', 'right'] as const).map((value, index) => <ToggleGroupItem key={value} value={value} aria-label={`Rata ${['kiri', 'tengah', 'kanan'][index]}`} onMouseDown={event => event.preventDefault()}>{['⇤', '↔', '⇥'][index]}</ToggleGroupItem>)}
     </ToggleGroup>

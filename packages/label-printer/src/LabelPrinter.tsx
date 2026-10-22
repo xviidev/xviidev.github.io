@@ -4,8 +4,9 @@ import { Checkbox } from '@xviidev/ui/components/checkbox'
 import { Button } from '@xviidev/ui/components/button'
 import { Input } from '@xviidev/ui/components/input'
 import { Field, FieldGroup, FieldLabel, FieldSet, FieldLegend } from '@xviidev/ui/components/field'
-import { NativeSelect, NativeSelectOption } from '@xviidev/ui/components/native-select'
-import { ToggleGroup, ToggleGroupItem } from '@xviidev/ui/components/toggle-group'
+import { SelectInput } from '@xviidev/ui/components/select-input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@xviidev/ui/components/tabs'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@xviidev/ui/components/accordion'
 import { Card, CardHeader, CardTitle, CardContent } from '@xviidev/ui/components/card'
 import { Alert, AlertDescription } from '@xviidev/ui/components/alert'
 import exampleWorkbook from '../public/contoh-label.xlsx?url'
@@ -48,7 +49,7 @@ export default function LabelPrinter() {
   const [preset, setPreset] = useState('24'), [paperChoice, setPaperChoice] = useState('a4')
   const [copies, setCopies] = useState(1), [start, setStart] = useState(1), [currentPage, setCurrentPage] = useState(0)
   const [previewWidth, setPreviewWidth] = useState(600), [dragMode, setDragMode] = useState(false)
-  const previewRef = useRef<HTMLDivElement>(null), templateRef = useRef<RichTextHandle>(null)
+  const previewRef = useRef<HTMLDivElement>(null), templateRef = useRef<RichTextHandle>(null), templateFileRef = useRef<HTMLInputElement>(null)
   const uploadVersion = useRef(0)
   const rows = useMemo(() => sheets[sheetIndex]?.data ?? [], [sheets, sheetIndex])
   const rawManual = useMemo(() => manualDocuments(manualDoc, true), [manualDoc])
@@ -161,15 +162,18 @@ export default function LabelPrinter() {
     finally { setExporting(false) }
   }
   return <>
-    <div className="mb-8"><p className="mb-3 text-xs text-muted-foreground">Utilitas / Cetak label</p><h1 className="mb-3 text-2xl">Cetak label</h1>
+    <div className="mb-6"><h1 className="mb-2 text-2xl font-medium">Cetak label</h1>
       <p className="max-w-2xl text-muted-foreground">Tulis dan format per baris, gunakan template untuk data Excel, lalu unduh PDF siap cetak.</p>
       <p className="mt-3 text-xs text-muted-foreground">Data tetap di perangkat Anda. Data hilang saat keluar dari editor atau memuat ulang halaman.</p>
     </div>
-    <nav aria-label="Bagian editor" className="mb-6 flex flex-wrap gap-4 border-y border-border py-3 text-xs lg:hidden"><a className="underline" href="#data-title">Data</a><a className="underline" href="#layout-title">Ukuran</a><a className="underline" href="#preview-title">Pratinjau</a></nav>
-    <div className="grid items-start gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
-      <div className="min-w-0 flex flex-col gap-5">
-        <Card size="sm" aria-labelledby="data-title"><CardHeader><CardTitle id="data-title">Data label</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
-          <ToggleGroup className="mb-5" variant="outline" value={[mode]} onValueChange={values => { if (values[0] === 'manual' || values[0] === 'excel') setMode(values[0]) }}><ToggleGroupItem value="manual">Isi manual</ToggleGroupItem><ToggleGroupItem value="excel">Dari Excel</ToggleGroupItem></ToggleGroup>
+    <div className="grid items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <Tabs defaultValue="data" className="min-w-0">
+        <TabsList aria-label="Pengaturan label" className="mb-4 w-full"><TabsTrigger value="data">Data</TabsTrigger><TabsTrigger value="paper">Kertas</TabsTrigger><TabsTrigger value="text">Teks</TabsTrigger></TabsList>
+        <TabsContent value="data" keepMounted className="flex flex-col gap-4 data-[hidden]:hidden">
+        <Card size="sm" aria-labelledby="data-title"><CardHeader><CardTitle id="data-title" role="heading" aria-level={2}>Data label</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
+          <Tabs value={mode} onValueChange={value=>{if(value==='manual'||value==='excel')setMode(value)}}>
+           <TabsList aria-label="Sumber data label" className="w-full"><TabsTrigger value="manual">Isi manual</TabsTrigger><TabsTrigger value="excel">Dari Excel</TabsTrigger></TabsList>
+           <TabsContent value={mode} className="mt-4">
           {mode === 'manual' ? <>
             <RichTextEditor key={`manual-${manualRevision}`} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Isi label manual" initialDocument={manualDoc} onChange={setManualDoc} />
             <p className="hint">Enter untuk baris baru. Satu baris kosong memisahkan label. Baris yang hanya berisi - tidak ikut dicetak. Pilih teks untuk mengatur formatnya.</p>
@@ -178,27 +182,31 @@ export default function LabelPrinter() {
             {applyTemplate && <p className="hint">Setiap baris manual menjadi kolom: baris 1 = {'{{1}}'}, baris 2 = {'{{2}}'}, dan seterusnya. Gunakan - untuk baris data yang kosong.</p>}
           </> : <>
             <Field><FieldLabel htmlFor="excel-file">Berkas Excel (.xlsx)</FieldLabel><Input id="excel-file" type="file" accept=".xlsx" onChange={event => { void importExcel(event.target.files?.[0]); event.target.value = '' }} /></Field>
-            <p className="hint">Maksimal 10 MB. Simpan nomor telepon dan kode berawalan nol sebagai teks.</p><a className="text-action mt-3 inline-block" href={exampleWorkbook} download>Unduh contoh Excel</a>
+            <p className="hint">Maksimal 10 MB. Simpan nomor telepon dan kode berawalan nol sebagai teks.</p><Button role="link" nativeButton={false} variant="link" size="sm" render={<a href={exampleWorkbook} download="contoh-label.xlsx" />}>Unduh contoh Excel</Button>
             <p className="mt-3 text-xs text-muted-foreground" role="status">{loading ? 'Membaca berkas…' : filename}</p>
-            {sheets.length > 0 && <div className="mt-4 flex flex-col gap-4"><Field className=""><FieldLabel htmlFor="label-setting-1">Sheet</FieldLabel><NativeSelect id="label-setting-1" value={sheetIndex} onChange={event => { setSheetIndex(Number(event.target.value)); setCurrentPage(0) }}>{sheets.map((sheet, i) => <NativeSelectOption key={i} value={i}>{sheet.sheet}</NativeSelectOption>)}</NativeSelect></Field><FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="excel-header" checked={header} onCheckedChange={setHeader} /><FieldLabel htmlFor="excel-header">Baris pertama adalah judul kolom</FieldLabel></Field></FieldSet></div>}
+            {sheets.length > 0 && <div className="mt-4 flex flex-col gap-4"><Field className=""><FieldLabel htmlFor="label-setting-1">Sheet</FieldLabel><SelectInput id="label-setting-1" className="w-full" value={String(sheetIndex)} onValueChange={value => { setSheetIndex(Number(value)); setCurrentPage(0) }} options={sheets.map((sheet,i)=>({value:String(i),label:sheet.sheet}))} /></Field><FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="excel-header" checked={header} onCheckedChange={setHeader} /><FieldLabel htmlFor="excel-header">Baris pertama adalah judul kolom</FieldLabel></Field></FieldSet></div>}
           </>}
+           </TabsContent>
+          </Tabs>
           <div className="mt-5"><NumberField label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /></div><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
         </FieldGroup></CardContent></Card>
-        {showTemplate && <Card size="sm" aria-labelledby="template-title"><CardHeader><CardTitle id="template-title">Template per baris</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
+        {showTemplate && <Card size="sm" aria-labelledby="template-title"><CardHeader><CardTitle id="template-title" role="heading" aria-level={2}>Template per baris</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
           <p className="hint mb-3">Contoh: baris {'{{1}}'} tebal, baris {'{{2}}'} normal. Nilai - atau kosong diabaikan tanpa menyisakan ruang. Jika semua kolom pada satu baris kosong, awalan teks baris itu juga dihapus.</p>
           <RichTextEditor key={`template-${templateRevision}`} ref={templateRef} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Template label" initialDocument={templateDoc} onChange={setTemplateDoc} />
           <p className="mt-4 mb-2 text-xs">Sisipkan kolom di posisi kursor</p><div className="flex max-h-40 flex-wrap gap-2 overflow-auto">{Array.from({ length: Math.min(columnCount, 100) }, (_, column) => <Button key={column} variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => templateRef.current?.insertText(`{{${column + 1}}}`)}>{`{{${column + 1}}}`} {mode === 'excel' && header ? formatCell(rows[0]?.[column]) : `Baris ${column + 1}`}</Button>)}</div>
-          <div className="mt-4 flex flex-wrap gap-4 text-xs"><Button variant="link" size="sm" className="" onClick={() => setTemplate(makeTemplate(Math.min(columnCount, 3)))}>Template awal</Button><Button variant="link" size="sm" className="" onClick={saveTemplate}>Simpan template</Button><label className="text-action cursor-pointer">Muat template<input className="sr-only" type="file" aria-label="Muat template JSON" accept=".json,application/json" onChange={event => { void openTemplate(event.target.files?.[0]); event.target.value = '' }} /></label></div>
+          <div className="mt-4 flex flex-wrap gap-4 text-xs"><Button variant="link" size="sm" className="" onClick={() => setTemplate(makeTemplate(Math.min(columnCount, 3)))}>Template awal</Button><Button variant="link" size="sm" className="" onClick={saveTemplate}>Simpan template</Button><Button variant="link" size="sm" onClick={()=>templateFileRef.current?.click()}>Muat template</Button><Input ref={templateFileRef} className="sr-only" type="file" aria-label="Muat template JSON" accept=".json,application/json" onChange={event => { void openTemplate(event.target.files?.[0]);event.target.value='' }} /></div>
           <p className="hint" role="status">{templateMessage}</p>
         </FieldGroup></CardContent></Card>}
-          <Card size="sm" aria-labelledby="layout-title"><CardHeader><CardTitle id="layout-title">Kertas &amp; ukuran</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
-            <Field className=""><FieldLabel htmlFor="label-setting-2">Mulai dari ukuran</FieldLabel><NativeSelect id="label-setting-2" value={preset} onChange={event => selectPreset(event.target.value)}><NativeSelectOption value="24">A4 · 24 label · 63,5 × 33,9 mm</NativeSelectOption><NativeSelectOption value="21">A4 · 21 label · 63,5 × 38,1 mm</NativeSelectOption><NativeSelectOption value="custom">Ukuran sendiri</NativeSelectOption></NativeSelect></Field>
+        </TabsContent>
+        <TabsContent value="paper" keepMounted className="data-[hidden]:hidden">
+          <Card size="sm" aria-labelledby="layout-title"><CardHeader><CardTitle id="layout-title" role="heading" aria-level={2}>Kertas &amp; ukuran</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
+            <Field className=""><FieldLabel htmlFor="label-setting-2">Mulai dari ukuran</FieldLabel><SelectInput id="label-setting-2" className="w-full" value={preset} onValueChange={selectPreset} options={[{value:'24',label:'A4 · 24 label · 63,5 × 33,9 mm'},{value:'21',label:'A4 · 21 label · 63,5 × 38,1 mm'},{value:'custom',label:'Ukuran sendiri'}]} /></Field>
             <p className="hint mb-4">Ukur lembar label Anda. Ukuran awal ini tidak terikat merek tertentu.</p>
-            <Field className=" mb-4"><FieldLabel htmlFor="label-setting-3">Kertas</FieldLabel><NativeSelect id="label-setting-3" value={paperChoice} onChange={event => {
-              setPaperChoice(event.target.value)
-              const size = { a4: [210, 297], a5: [148, 210], letter: [215.9, 279.4] }[event.target.value]
-              if (size) { setSettings(previous => ({ ...previous, paperWidth: size[0], paperHeight: size[1] })); setPreset('custom') }
-            }}><NativeSelectOption value="a4">A4</NativeSelectOption><NativeSelectOption value="a5">A5</NativeSelectOption><NativeSelectOption value="letter">Letter</NativeSelectOption><NativeSelectOption value="custom">Ukuran sendiri / lanskap</NativeSelectOption></NativeSelect></Field>
+            <Field className=" mb-4"><FieldLabel htmlFor="label-setting-3">Kertas</FieldLabel><SelectInput id="label-setting-3" className="w-full" value={paperChoice} onValueChange={value => {
+              setPaperChoice(value)
+              const size = { a4: [210,297], a5:[148,210], letter:[215.9,279.4] }[value]
+              if (size) { setSettings(previous=>({...previous,paperWidth:size[0],paperHeight:size[1]}));setPreset('custom') }
+            }} options={[{value:'a4',label:'A4'},{value:'a5',label:'A5'},{value:'letter',label:'Letter'},{value:'custom',label:'Ukuran sendiri / lanskap'}]} /></Field>
             <FieldGroup className="grid grid-cols-2 gap-3">
               <NumberField label="Lebar kertas (mm)" value={settings.paperWidth} onChange={value => update('paperWidth', value)} min={1} />
               <NumberField label="Tinggi kertas (mm)" value={settings.paperHeight} onChange={value => update('paperHeight', value)} min={1} />
@@ -215,13 +223,15 @@ export default function LabelPrinter() {
             <div className="mt-4"><NumberField label="Mulai di posisi label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div>
             <p className="hint">Urutan dari kiri ke kanan, lalu ke bawah. Posisi yang dilewati hanya berlaku di lembar pertama.</p>
           </FieldGroup></CardContent></Card>
-          <Card size="sm" aria-labelledby="text-title"><CardHeader><CardTitle id="text-title">Tampilan dasar</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
+        </TabsContent>
+        <TabsContent value="text" keepMounted className="data-[hidden]:hidden">
+          <Card size="sm" aria-labelledby="text-title"><CardHeader><CardTitle id="text-title" role="heading" aria-level={2}>Tampilan dasar</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
             <FieldGroup className="grid grid-cols-2 gap-3">
               <NumberField label="Ukuran huruf (pt)" value={settings.fontSize} onChange={value => update('fontSize', value)} min={1} max={100} step={0.5} />
               <NumberField label="Ruang dalam (mm)" value={settings.padding} onChange={value => update('padding', value)} />
-              <Field className=""><FieldLabel htmlFor="label-setting-4">Huruf</FieldLabel><NativeSelect id="label-setting-4" value={settings.font} onChange={event => update('font', event.target.value as LabelSettings['font'])}><NativeSelectOption value="sans">Sans (Noto Sans)</NativeSelectOption><NativeSelectOption value="mono">JetBrains Mono</NativeSelectOption></NativeSelect></Field>
-              <Field className=""><FieldLabel htmlFor="label-setting-5">Rata teks</FieldLabel><NativeSelect id="label-setting-5" value={settings.align} onChange={event => update('align', event.target.value as LabelSettings['align'])}><NativeSelectOption value="left">Kiri</NativeSelectOption><NativeSelectOption value="center">Tengah</NativeSelectOption><NativeSelectOption value="right">Kanan</NativeSelectOption></NativeSelect></Field>
-              <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><NativeSelect id="label-setting-6" value={settings.vertical} onChange={event => update('vertical', event.target.value as LabelSettings['vertical'])}><NativeSelectOption value="top">Atas</NativeSelectOption><NativeSelectOption value="center">Tengah</NativeSelectOption><NativeSelectOption value="bottom">Bawah</NativeSelectOption></NativeSelect></Field>
+              <Field className=""><FieldLabel htmlFor="label-setting-4">Huruf</FieldLabel><SelectInput id="label-setting-4" className="w-full" value={settings.font} onValueChange={value => update('font',value as LabelSettings['font'])} options={[{value:'sans',label:'Sans (Noto Sans)'},{value:'mono',label:'JetBrains Mono'}]} /></Field>
+              <Field className=""><FieldLabel htmlFor="label-setting-5">Rata teks</FieldLabel><SelectInput id="label-setting-5" className="w-full" value={settings.align} onValueChange={value => update('align',value as LabelSettings['align'])} options={[{value:'left',label:'Kiri'},{value:'center',label:'Tengah'},{value:'right',label:'Kanan'}]} /></Field>
+              <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><SelectInput id="label-setting-6" className="w-full" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /></Field>
             </FieldGroup>
             <FieldGroup className="mt-4 grid grid-cols-2 gap-3">
               <NumberField label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
@@ -232,8 +242,9 @@ export default function LabelPrinter() {
             <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>
           </FieldGroup></CardContent></Card>
-      </div>
-      <section className="min-w-0 lg:sticky lg:top-6" aria-labelledby="preview-title">
+        </TabsContent>
+      </Tabs>
+      <section className="min-w-0 xl:sticky xl:top-20" aria-labelledby="preview-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="preview-title">Pratinjau</h2><div className="flex flex-wrap gap-2"><Button  disabled={!canExport} onClick={() => { void exportPdf(false) }}>{exporting ? 'Menyiapkan…' : 'Unduh PDF'}</Button><Button variant="outline" size="sm" disabled={!canExport} onClick={() => { void exportPdf(true) }}>Buka PDF untuk cetak</Button></div></div>
         <p className="mb-4 text-xs text-muted-foreground" aria-live="polite">{labelResult.labels.length} label · {pages.length} lembar · {layout.columns} kolom × {layout.rows} baris</p>
         {errors.length > 0 && <Alert variant="destructive" className="mb-4"><AlertDescription><ul className="list-disc pl-4">{errors.map(error => <li key={error}>{error}</li>)}</ul></AlertDescription></Alert>}
@@ -245,7 +256,7 @@ export default function LabelPrinter() {
           {model && renderState && errors.length === 0 ? <CanvasSheet model={model} page={displayedPage} fonts={renderState.fonts} settings={settings} columns={layout.columns} rows={layout.rows} width={previewWidth} draggable={dragMode} onMove={(x, y) => setSettings(previous => ({ ...previous, offsetX: Math.round(((previous.offsetX ?? 0) + x) * 10) / 10, offsetY: Math.round(((previous.offsetY ?? 0) + y) * 10) / 10 }))} /> : <Empty className="min-h-72"><EmptyHeader><EmptyTitle>{errors.length ? 'Periksa pengaturan' : labelResult.labels.length && !ready ? 'Menyiapkan pratinjau' : 'Belum ada label'}</EmptyTitle><EmptyDescription>{errors.length ? 'Perbaiki pengaturan untuk menampilkan pratinjau.' : labelResult.labels.length && !ready ? 'Font dan tata letak sedang disiapkan.' : 'Isi label atau unggah Excel untuk memulai.'}</EmptyDescription></EmptyHeader>{!!labelResult.labels.length && !ready && <Skeleton className="h-24 w-full" />}</Empty>}
         </div></div>
         {pages.length > 0 && <div className="mt-4 flex items-center justify-between gap-3 text-xs"><Button variant="outline" size="sm" disabled={displayedPage === 0} onClick={() => setCurrentPage(displayedPage - 1)}>Sebelumnya</Button><span>Lembar {displayedPage + 1} / {pages.length}</span><Button variant="outline" size="sm" disabled={displayedPage >= pages.length - 1} onClick={() => setCurrentPage(displayedPage + 1)}>Berikutnya</Button></div>}
-        {pages[displayedPage] && <details className="mt-4 text-xs"><summary className="cursor-pointer text-muted-foreground">Lihat isi label pada lembar ini</summary><ol className="mt-3 max-h-60 flex flex-col gap-3 overflow-auto border border-border p-4">{pages[displayedPage].flatMap(slot => slot ? [<li key={slot.index} className="whitespace-pre-wrap"><span className="text-muted-foreground">{slot.index + 1}. </span>{slot.text}</li>] : [])}</ol></details>}
+        {pages[displayedPage] && <Accordion className="mt-4"><AccordionItem value="label-content"><AccordionTrigger>Lihat isi label pada lembar ini</AccordionTrigger><AccordionContent><ol className="mt-3 max-h-60 flex flex-col gap-3 overflow-auto border border-border p-4">{pages[displayedPage].flatMap(slot => slot ? [<li key={slot.index} className="whitespace-pre-wrap"><span className="text-muted-foreground">{slot.index + 1}. </span>{slot.text}</li>] : [])}</ol></AccordionContent></AccordionItem></Accordion>}
         <p className="hint mt-4">PDF memakai ukuran fisik dan font tertanam. Buka PDF, pilih kertas yang sama, dan cetak pada skala 100% / ukuran asli. Garis putus-putus canvas tidak ikut diekspor. Lakukan cetak uji pada kertas biasa.</p>
       </section>
     </div>

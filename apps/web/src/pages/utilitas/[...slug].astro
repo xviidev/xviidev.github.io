@@ -1,0 +1,7 @@
+---
+import UtilityLayout from '../../layouts/UtilityLayout.astro';
+import { utilities } from '../../lib/utilities';
+export function getStaticPaths() { return utilities.map(tool => ({params:{slug:tool.slug},props:{title:tool.title,description:tool.description}})); }
+const { title, description } = Astro.props;
+---
+<UtilityLayout title={`${title} — XVII Dev`} description={description} />

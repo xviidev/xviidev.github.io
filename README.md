@@ -30,4 +30,10 @@ Data penerima diproses lokal di browser; tidak diunggah atau disimpan otomatis. 
 
 ## Menambah utilitas
 
-Buat `packages/nama-utilitas` dengan satu entry React dan dependensi `@xviidev/ui`. Daftarkan package pada host, tambahkan halaman Astro untuk akses langsung di GitHub Pages, lalu tautkan dari katalog. Tema dan komponen tetap di `packages/ui`. Untuk menambah komponen bersama: `npx shadcn@latest add <component> -c apps/web`.
+Buat `packages/nama-utilitas` dengan satu entry React dan dependensi `@xviidev/ui`. Daftarkan metadata, ikon, dan pemuat entry package pada `apps/web/src/lib/utilities.ts`. Katalog, sidebar, pencarian cepat, route client, dan halaman statis GitHub Pages mengikuti daftar ini secara otomatis. Tema dan komponen tetap di `packages/ui`. Untuk menambah komponen bersama: `npx shadcn@latest add <component> -c apps/web`.
+
+## Layout utilitas
+
+`UtilityLayout` terpisah dari layout portfolio. Katalog memiliki pencarian, tab kategori, dan kartu utilitas. Di halaman alat, `UtilityShell` menyediakan sidebar, pencarian cepat (Ctrl+K), tema, dan navigasi yang sama untuk setiap package. Metadata ringan diekspor oleh masing-masing utilitas; halaman statis dibuat dari daftar metadata dan implementasi dimuat saat diperlukan.
+
+Semua kontrol menggunakan `packages/ui`, termasuk Select (bukan NativeSelect), Tabs, Button, Input, Checkbox, Accordion, dan Sidebar. `npm run check:ui` memeriksa kontrak ini pada semua package utilitas.
