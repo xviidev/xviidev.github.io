@@ -1,6 +1,6 @@
 import { ToggleGroup, ToggleGroupItem } from '@xviidev/ui/components/toggle-group'
-import { Button } from '@xviidev/ui/components/button'
-import { SelectInput } from '@xviidev/ui/components/select-input'
+import { Input } from '@xviidev/ui/components/input'
+import { BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon } from '@xviidev/ui/lib/icons'
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
@@ -11,7 +11,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getSelectionStyleValueForProperty, $patchStyleText } from '@lexical/selection'
 import { mergeRegister } from '@lexical/utils'
-import { $setSelection, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, SELECTION_CHANGE_COMMAND, UNDO_COMMAND } from 'lexical'
+import { $setSelection, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, SELECTION_CHANGE_COMMAND } from 'lexical'
 import type { LexicalNode, RangeSelection } from 'lexical'
 import type { RichDocument, RichLine, RichRun, Weight } from '../lib/rich-text'
 
@@ -47,13 +47,13 @@ function readDocument(): RichDocument {
   })
 }
 
-const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
+const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Controls({ fontSize }, ref) {
   const [editor] = useLexicalComposerContext()
   const savedSelection = useRef<RangeSelection | null>(null)
-  const [bold, setBold] = useState(false), [italic, setItalic] = useState(false), [underline, setUnderline] = useState(false)
+  const [bold, setBold] = useState(false), [italic, setItalic] = useState(false)
   const [align, setAlign] = useState('left')
-  const [weight, setWeight] = useState('400'), [size, setSize] = useState('')
-  const [canUndo, setCanUndo] = useState(false), [canRedo, setCanRedo] = useState(false)
+  const [size, setSize] = useState(String(fontSize))
+  const editingSize = useRef(false)
   useImperativeHandle(ref, () => ({ insertText(text) {
     editor.update(() => {
       let selection = $getSelection()
@@ -69,9 +69,8 @@ const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
       savedSelection.current = selection.clone()
       const node = selection.anchor.getNode(); const paragraph = $isElementNode(node) ? node : node.getParent()
       setAlign(paragraph?.getFormatType() || 'left')
-      setBold(selection.hasFormat('bold')); setItalic(selection.hasFormat('italic')); setUnderline(selection.hasFormat('underline'))
-      setWeight(selection.hasFormat('bold') ? '700' : $getSelectionStyleValueForProperty(selection, 'font-weight', '400'))
-      setSize($getSelectionStyleValueForProperty(selection, 'font-size', '').replace('pt', ''))
+      setBold(selection.hasFormat('bold') || $getSelectionStyleValueForProperty(selection, 'font-weight', '400') === '700'); setItalic(selection.hasFormat('italic'))
+      if (!editingSize.current) setSize($getSelectionStyleValueForProperty(selection, 'font-size', `${fontSize}pt`).replace('pt', ''))
     }
     return mergeRegister(
       editor.registerCommand(FORMAT_TEXT_COMMAND, format => {
@@ -85,10 +84,9 @@ const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
       }, COMMAND_PRIORITY_HIGH),
       editor.registerUpdateListener(({ editorState }) => editorState.read(update)),
       editor.registerCommand(SELECTION_CHANGE_COMMAND, () => { update(); return false }, COMMAND_PRIORITY_LOW),
-      editor.registerCommand(CAN_UNDO_COMMAND, value => { setCanUndo(value); return false }, COMMAND_PRIORITY_LOW),
-      editor.registerCommand(CAN_REDO_COMMAND, value => { setCanRedo(value); return false }, COMMAND_PRIORITY_LOW),
     )
-  }, [editor])
+  }, [editor, fontSize])
+  useEffect(() => { if (!editingSize.current) setSize(String(fontSize)) }, [fontSize])
   function style(property: string, value: string | null) {
     editor.update(() => {
       let selection = $getSelection()
@@ -101,24 +99,28 @@ const Controls = forwardRef<RichTextHandle>(function Controls(_, ref) {
     })
     requestAnimationFrame(()=>editor.focus())
   }
+  function commitSize() {
+    editingSize.current = false
+    const value = Number(size)
+    if (!Number.isFinite(value) || value < 4 || value > 100) { setSize(String(fontSize)); return }
+    style('font-size', `${value}pt`)
+  }
   return <div className="rich-toolbar" role="toolbar" aria-label="Format teks">
-    <ToggleGroup multiple size="sm" value={[...(bold || weight === '700' ? ['bold'] : []), ...(italic ? ['italic'] : []), ...(underline ? ['underline'] : [])]} onValueChange={values => {
-      for (const format of ['bold', 'italic', 'underline'] as const) {
-        const active = format === 'bold' ? bold || weight === '700' : format === 'italic' ? italic : underline
-        if (values.includes(format) !== active) editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
+    <ToggleGroup multiple size="icon-sm" spacing={1} aria-label="Gaya huruf" value={[...(bold ? ['bold'] : []), ...(italic ? ['italic'] : [])]} onValueChange={values => {
+      for (const format of ['bold', 'italic'] as const) {
+        if (values.includes(format) !== (format === 'bold' ? bold : italic)) editor.dispatchCommand(FORMAT_TEXT_COMMAND, format)
       }
     }}>
-      <ToggleGroupItem value="bold" aria-label="Tebal" title="Tebal (Ctrl+B)" onMouseDown={event => event.preventDefault()}><strong>B</strong></ToggleGroupItem>
-      <ToggleGroupItem value="italic" aria-label="Miring" title="Miring (Ctrl+I)" onMouseDown={event => event.preventDefault()}><em>I</em></ToggleGroupItem>
-      <ToggleGroupItem value="underline" aria-label="Garis bawah" title="Garis bawah (Ctrl+U)" onMouseDown={event => event.preventDefault()}><u>U</u></ToggleGroupItem>
+      <ToggleGroupItem value="bold" aria-label="Tebal" title="Tebal (Ctrl+B)" onMouseDown={event => event.preventDefault()}><BoldIcon /></ToggleGroupItem>
+      <ToggleGroupItem value="italic" aria-label="Miring" title="Miring (Ctrl+I)" onMouseDown={event => event.preventDefault()}><ItalicIcon /></ToggleGroupItem>
     </ToggleGroup>
-    <SelectInput size="sm" label="Ketebalan teks terpilih" value={weight} onValueChange={value=>style('font-weight',value)} options={[{value:'300',label:'Tipis'},{value:'400',label:'Normal'},{value:'500',label:'Sedang'},{value:'600',label:'Semitebal'},{value:'700',label:'Tebal'}]} />
-    <SelectInput size="sm" label="Ukuran teks terpilih" value={size || 'base'} onValueChange={value=>style('font-size',value==='base'?null:`${value}pt`)} options={[{value:'base',label:'Ukuran dasar'},...[6,7,8,9,10,11,12,14,16,18,20,24,32,48,72].map(size=>({value:String(size),label:`${size} pt`}))]} />
-    <ToggleGroup size="sm" value={[align]} onValueChange={values => { const value = values[0]; if (value === 'left' || value === 'center' || value === 'right') editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value) }}>
-      {(['left', 'center', 'right'] as const).map((value, index) => <ToggleGroupItem key={value} value={value} aria-label={`Rata ${['kiri', 'tengah', 'kanan'][index]}`} onMouseDown={event => event.preventDefault()}>{['⇤', '↔', '⇥'][index]}</ToggleGroupItem>)}
+    <div className="mx-0.5 flex items-center gap-1 border-x border-border px-1">
+      <Input className="h-8 w-14 px-1 text-center" type="number" aria-label="Ukuran huruf" title="Ukuran huruf, 4–100 pt" min={4} max={100} step={0.5} value={size} onFocus={() => { editingSize.current = true }} onChange={event => setSize(event.target.value)} onBlur={commitSize} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } }} />
+      <span className="text-xs text-muted-foreground">pt</span>
+    </div>
+    <ToggleGroup size="icon-sm" spacing={1} aria-label="Perataan paragraf" value={[align]} onValueChange={values => { const value = values[0]; if (value === 'left' || value === 'center' || value === 'right') editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value) }}>
+      {([{ value: 'left', label: 'kiri', icon: AlignLeftIcon }, { value: 'center', label: 'tengah', icon: AlignCenterIcon }, { value: 'right', label: 'kanan', icon: AlignRightIcon }] as const).map(({ value, label, icon: Icon }) => <ToggleGroupItem key={value} value={value} aria-label={`Rata ${label}`} title={`Rata ${label}`} onMouseDown={event => event.preventDefault()}><Icon /></ToggleGroupItem>)}
     </ToggleGroup>
-    <Button variant="ghost" size="icon-sm" type="button" aria-label="Urungkan" title="Urungkan (Ctrl+Z)" disabled={!canUndo} onMouseDown={event => event.preventDefault()} onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}>↶</Button>
-    <Button variant="ghost" size="icon-sm" type="button" aria-label="Ulangi" title="Ulangi (Ctrl+Y)" disabled={!canRedo} onMouseDown={event => event.preventDefault()} onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}>↷</Button>
   </div>
 })
 
@@ -145,7 +147,7 @@ export const RichTextEditor = forwardRef<RichTextHandle, Props>(function RichTex
   }), [])
   return <LexicalComposer initialConfig={initialConfig}>
     <div className="rich-editor">
-      <Controls ref={ref} />
+      <Controls ref={ref} fontSize={fontSize} />
       <RichTextPlugin contentEditable={<ContentEditable className="rich-content" style={{ fontFamily, fontSize: `${fontSize}pt`, lineHeight }} aria-label={label} spellCheck={false} />} ErrorBoundary={LexicalErrorBoundary} />
       <HistoryPlugin />
       <OnChangePlugin ignoreSelectionChange onChange={editorState => editorState.read(() => onChange(readDocument()))} />

@@ -22,7 +22,7 @@ npm test
 npm run build
 ```
 
-Homepage: `/`; katalog: `/utilitas/`; cetak label: `/utilitas/cetak-label/`.
+Homepage: `/`; katalog: `/utilitas/`; cetak label: `/utilitas/label-printer/`.
 
 Build menghasilkan `apps/web/dist`. GitHub Actions memvalidasi semua workspace dan menerbitkannya ke GitHub Pages dengan domain xvii.dev.
 
@@ -37,3 +37,5 @@ Buat `packages/nama-utilitas` dengan satu entry React dan dependensi `@xviidev/u
 `UtilityLayout` terpisah dari layout portfolio. Katalog memiliki pencarian, tab kategori, dan kartu utilitas. Di halaman alat, `UtilityShell` menyediakan sidebar, pencarian cepat (Ctrl+K), tema, dan navigasi yang sama untuk setiap package. Metadata ringan diekspor oleh masing-masing utilitas; halaman statis dibuat dari daftar metadata dan implementasi dimuat saat diperlukan.
 
 Semua kontrol menggunakan `packages/ui`, termasuk Select (bukan NativeSelect), Tabs, Button, Input, Checkbox, Accordion, dan Sidebar. `npm run check:ui` memeriksa kontrak ini pada semua package utilitas.
+
+Preset dokumen cetak label disimpan di IndexedDB melalui Dexie. Preset mencakup nama, keterangan, ukuran kertas, susunan label, dan format baris; isi label dan data penerima tidak disimpan. Cadangan preset dapat diekspor/impor sebagai JSON melalui panel Atur preset. Menghapus data browser menghapus preset. Path lama `/utilitas/cetak-label/` mengarah ke path baru.

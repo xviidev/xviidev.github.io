@@ -13,6 +13,7 @@ const toggleVariants = cva(
         outline: "border border-input bg-transparent hover:bg-muted",
       },
       size: {
+        "icon-sm": "size-8 min-w-8 p-0",
         default:
           "h-10 min-w-10 px-6 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
         sm: "h-9 min-w-9 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
