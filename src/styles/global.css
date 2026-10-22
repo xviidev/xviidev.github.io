@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@layer base {
+  a:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 6px;
+  }
+}
