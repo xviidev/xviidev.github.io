@@ -28,9 +28,9 @@ export function UtilityCatalog() {
    {['Semua',...categories].map(category=>{
     const matches=searchUtilities(query,category)
     return <TabsContent key={category} value={category} className="flex flex-col gap-8">
-     <p className="text-xs text-muted-foreground" role="status">{matches.length} utilitas{query ? ` untuk “${query}”` : ' tersedia'}</p>
+     <p className="text-sm text-muted-foreground" role="status">{matches.length} utilitas{query ? ` untuk “${query}”` : ' tersedia'}</p>
      {matches.length ? categories.filter(group=>matches.some(tool=>tool.category===group)).map(group=><section key={group} aria-label={group} className="flex flex-col gap-5">
-      <div className="flex items-center gap-4"><h2 className="shrink-0 text-xs font-semibold tracking-widest uppercase">{group}</h2><Separator className="flex-1" /></div>
+      <div className="flex items-center gap-4"><h2 className="shrink-0 text-sm font-semibold tracking-normal normal-case">{group}</h2><Separator className="flex-1" /></div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{matches.filter(tool=>tool.category===group).map(tool=><Card key={tool.slug} size="sm">
        <CardHeader className="gap-4"><div className="flex items-center justify-between"><tool.icon className="size-5" aria-hidden="true" /><Badge variant="outline">{tool.category}</Badge></div><CardTitle role="heading" aria-level={3}>{tool.title}</CardTitle><CardDescription>{tool.description}</CardDescription></CardHeader>
        <CardFooter><Button role="link" nativeButton={false} variant="outline" size="sm" className="w-full" aria-label={`Buka ${tool.title}`} render={<Link to={`/${tool.slug}`} />}>Buka utilitas<ArrowUpRightIcon data-icon="inline-end" /></Button></CardFooter>
@@ -39,6 +39,6 @@ export function UtilityCatalog() {
     </TabsContent>
    })}
   </Tabs>
-  <div className="mt-12 flex items-start gap-3 border-t border-border pt-6 text-xs leading-relaxed text-muted-foreground"><ShieldCheckIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><p>Pada cetak label, berkas Excel dan data penerima diproses di perangkat Anda.</p></div>
+  <div className="mt-12 flex items-start gap-3 border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground"><ShieldCheckIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><p>Pada cetak label, berkas Excel dan data penerima diproses di perangkat Anda.</p></div>
  </div>
 }

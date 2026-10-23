@@ -5,7 +5,7 @@ import { Skeleton } from '@xviidev/ui/components/skeleton'
 import { UtilityShell } from './utilities/UtilityShell'
 import { UtilityCatalog } from './utilities/UtilityCatalog'
 import { utilities } from '../lib/utilities'
-const rootRoute = createRootRoute({component:UtilityShell})
+const rootRoute = createRootRoute({component:UtilityShell,notFoundComponent:()=> <div className="flex flex-col items-start gap-4 p-6"><h1 className="text-2xl font-semibold">Utilitas tidak ditemukan</h1><p>Pilih alat yang tersedia dari katalog.</p><Button role="link" nativeButton={false} render={<a href="/utilitas/" />}>Buka katalog utilitas</Button></div>})
 const catalogRoute = createRoute({getParentRoute:()=>rootRoute,path:'/',component:UtilityCatalog})
 const toolRoutes = utilities.map(tool=>createRoute({getParentRoute:()=>rootRoute,path:`/${tool.slug}`,component:lazyRouteComponent(tool.load)}))
 const routeTree = rootRoute.addChildren([catalogRoute,...toolRoutes])

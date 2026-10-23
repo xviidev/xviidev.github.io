@@ -28,7 +28,9 @@ async function scan(dir) {
   visit(source)
  }
 }
-await scan(resolve(root,'apps/web/src/components'))
+for (const entry of await readdir(resolve(root,'apps'), {withFileTypes:true})) {
+ if (entry.isDirectory()) await scan(resolve(root,'apps',entry.name,'src'))
+}
 for(const entry of await readdir(resolve(root,'packages'),{withFileTypes:true})) {
  if(entry.isDirectory()&&entry.name!=='ui') await scan(resolve(root,'packages',entry.name,'src'))
 }

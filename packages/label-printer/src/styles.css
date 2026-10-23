@@ -1,7 +1,7 @@
 @layer components {
- .hint { @apply mt-2 text-xs leading-relaxed text-muted-foreground; }
- .check-label { @apply flex items-start gap-2 text-xs leading-relaxed text-muted-foreground; }
- .text-action { @apply text-xs underline underline-offset-4 hover:no-underline; }
+ .hint { @apply mt-2 text-sm leading-relaxed text-muted-foreground; }
+ .check-label { @apply flex items-start gap-2 text-sm leading-relaxed text-muted-foreground; }
+ .text-action { @apply text-sm underline underline-offset-4 hover:no-underline; }
  .rich-editor { @apply min-w-0 rounded-lg border border-input bg-background; }
  .rich-toolbar { @apply flex flex-wrap items-center gap-1 rounded-t-lg border-b border-border bg-muted p-1.5; }
  .rich-content { @apply min-h-40 max-h-96 overflow-auto p-3 outline-none; white-space: pre-wrap; overflow-wrap: anywhere; }

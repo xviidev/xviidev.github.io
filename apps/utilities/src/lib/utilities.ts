@@ -1,6 +1,10 @@
-import { labelPrinter } from '@xviidev/label-printer/metadata'
+import type { ComponentType } from 'react'
+import { utilityMetadata } from './metadata'
 import { TagsIcon } from '@xviidev/ui/lib/icons'
-export const utilities = [{ ...labelPrinter, icon: TagsIcon, load:()=>import('@xviidev/label-printer') }]
+const implementations = {
+ 'label-printer': { icon: TagsIcon, load:()=>import('@xviidev/label-printer') },
+} satisfies Record<(typeof utilityMetadata)[number]['slug'], { icon: typeof TagsIcon; load: () => Promise<{ default: ComponentType }> }>
+export const utilities = utilityMetadata.map(tool => ({ ...tool, ...implementations[tool.slug] }))
 export const categories = [...new Set(utilities.map(tool => tool.category))]
 export function searchUtilities(query: string, category = 'Semua') {
  const terms = query.toLocaleLowerCase('id').trim().split(/\s+/).filter(Boolean)

@@ -4,7 +4,8 @@ Monorepo untuk xvii.dev. Antarmuka tetap berbahasa Indonesia.
 
 ## Struktur
 
-- `apps/web`: homepage Astro dan host utilitas dengan React + TanStack Router.
+- `apps/web`: homepage Astro.
+- `apps/utilities`: aplikasi utilitas React + Vite + TanStack Router.
 - `packages/ui`: komponen shadcn/ui bersama, preset `b6RfRCplyq`, tema, dan token desain.
 - `packages/label-printer`: utilitas cetak label, Lexical, pratinjau Konva, impor Excel, dan ekspor PDF.
 
@@ -16,7 +17,8 @@ Node.js 24+. Jalankan dari root:
 
 ```sh
 npm ci
-npm run dev
+npm run dev           # utilitas, port 4326
+npm run dev:web       # homepage, port 4321
 npm run check
 npm test
 npm run build
@@ -24,17 +26,17 @@ npm run build
 
 Homepage: `/`; katalog: `/utilitas/`; cetak label: `/utilitas/label-printer/`.
 
-Build menghasilkan `apps/web/dist`. GitHub Actions memvalidasi semua workspace dan menerbitkannya ke GitHub Pages dengan domain xvii.dev.
+Build menggabungkan `apps/web/dist` dan `apps/utilities/dist` ke `dist/` di root. `npm run preview` membuka hasil gabungan pada port 4325. GitHub Actions memvalidasi semua workspace dan menerbitkannya ke GitHub Pages dengan domain xvii.dev.
 
 Data penerima diproses lokal di browser; tidak diunggah atau disimpan otomatis. Baris kosong memisahkan label manual, dan baris yang hanya berisi `-` diabaikan. Template dapat disimpan sebagai JSON tanpa data penerima. Cetak PDF pada skala 100% setelah menguji kecocokan dengan lembar label.
 
 ## Menambah utilitas
 
-Buat `packages/nama-utilitas` dengan satu entry React dan dependensi `@xviidev/ui`. Daftarkan metadata, ikon, dan pemuat entry package pada `apps/web/src/lib/utilities.ts`. Katalog, sidebar, pencarian cepat, route client, dan halaman statis GitHub Pages mengikuti daftar ini secara otomatis. Tema dan komponen tetap di `packages/ui`. Untuk menambah komponen bersama: `npx shadcn@latest add <component> -c apps/web`.
+Buat `packages/nama-utilitas` dengan satu entry React dan dependensi `@xviidev/ui`. Daftarkan metadata pada `apps/utilities/src/lib/metadata.ts`, lalu ikon dan pemuat entry package pada `apps/utilities/src/lib/utilities.ts`. Katalog, sidebar, pencarian cepat, route client, dan halaman statis GitHub Pages mengikuti daftar ini secara otomatis. Tema dan komponen tetap di `packages/ui`; utilitas memakai Inter 14–16 px, label dengan huruf biasa, dan jarak huruf normal. Font dokumen cetak terpisah dari font aplikasi. Untuk menambah komponen bersama: `npx shadcn@latest add <component> -c apps/utilities`.
 
 ## Layout utilitas
 
-`UtilityLayout` terpisah dari layout portfolio. Katalog memiliki pencarian, tab kategori, dan kartu utilitas. Di halaman alat, `UtilityShell` menyediakan sidebar, pencarian cepat (Ctrl+K), tema, dan navigasi yang sama untuk setiap package. Metadata ringan diekspor oleh masing-masing utilitas; halaman statis dibuat dari daftar metadata dan implementasi dimuat saat diperlukan.
+Aplikasi utilitas berdiri sendiri dengan entry React di `apps/utilities/src/main.tsx`; homepage tetap memakai Astro. Katalog memiliki pencarian, tab kategori, dan kartu utilitas. Di halaman alat, `UtilityShell` menyediakan sidebar, pencarian cepat (Ctrl+K), tema, dan navigasi yang sama untuk setiap package. Metadata ringan diekspor oleh masing-masing utilitas; halaman statis dibuat dari daftar metadata dan implementasi dimuat saat diperlukan.
 
 Semua kontrol menggunakan `packages/ui`, termasuk Select (bukan NativeSelect), Tabs, Button, Input, Checkbox, Accordion, dan Sidebar. `npm run check:ui` memeriksa kontrak ini pada semua package utilitas.
 

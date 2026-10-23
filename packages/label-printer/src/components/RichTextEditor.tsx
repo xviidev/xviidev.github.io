@@ -116,7 +116,7 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
     </ToggleGroup>
     <div className="mx-0.5 flex items-center gap-1 border-x border-border px-1">
       <Input className="h-8 w-14 px-1 text-center" type="number" aria-label="Ukuran huruf" title="Ukuran huruf, 4–100 pt" min={4} max={100} step={0.5} value={size} onFocus={() => { editingSize.current = true }} onChange={event => setSize(event.target.value)} onBlur={commitSize} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } }} />
-      <span className="text-xs text-muted-foreground">pt</span>
+      <span className="text-sm text-muted-foreground">pt</span>
     </div>
     <ToggleGroup size="icon-sm" spacing={1} aria-label="Perataan paragraf" value={[align]} onValueChange={values => { const value = values[0]; if (value === 'left' || value === 'center' || value === 'right') editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value) }}>
       {([{ value: 'left', label: 'kiri', icon: AlignLeftIcon }, { value: 'center', label: 'tengah', icon: AlignCenterIcon }, { value: 'right', label: 'kanan', icon: AlignRightIcon }] as const).map(({ value, label, icon: Icon }) => <ToggleGroupItem key={value} value={value} aria-label={`Rata ${label}`} title={`Rata ${label}`} onMouseDown={event => event.preventDefault()}><Icon /></ToggleGroupItem>)}

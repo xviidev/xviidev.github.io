@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import logoUrl from '@xviidev/ui/brand.svg?url'
 import type { CSSProperties } from 'react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Button } from '@xviidev/ui/components/button'
@@ -14,7 +15,7 @@ function ThemeButton() {
  return <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label={dark?'Gunakan tema terang':'Gunakan tema gelap'} onClick={()=>setDark(!dark)} />}>{dark?<SunIcon />:<MoonIcon />}</TooltipTrigger><TooltipContent>{dark?'Tema terang':'Tema gelap'}</TooltipContent></Tooltip>
 }
 function Brand() {
- return <Button role="link" nativeButton={false} variant="ghost" className="justify-start gap-3" render={<Link to="/" />}><img src="/assets/logo.svg" alt="XVII Dev" className="h-8 w-auto dark:invert" width="32" height="32" /><span>Utilitas</span></Button>
+ return <Button role="link" nativeButton={false} variant="ghost" className="justify-start gap-3" render={<Link to="/" />}><img src={logoUrl} alt="XVII Dev" className="h-8 w-auto dark:invert" width="32" height="32" /><span>Utilitas</span></Button>
 }
 function ToolsSidebar({active,onSearch}:{active?:string;onSearch:()=>void}) {
  const {setOpenMobile}=useSidebar()
@@ -31,6 +32,11 @@ function ToolsSidebar({active,onSearch}:{active?:string;onSearch:()=>void}) {
 export function UtilityShell() {
  const path=useRouterState({select:state=>state.location.pathname})
  const active=utilities.find(tool=>path.replace(/\/$/,'').endsWith(`/${tool.slug}`))
+ useEffect(()=>{
+  document.title = active ? `${active.title} — XVII Dev` : 'Utilitas — XVII Dev'
+  document.querySelector('meta[name="description"]')?.setAttribute('content', active?.description ?? 'Alat sederhana untuk pekerjaan sehari-hari. Langsung di browser.')
+  document.querySelector('link[rel="canonical"]')?.setAttribute('href', `https://xvii.dev/utilitas/${active ? active.slug + '/' : ''}`)
+ },[active])
  const [searchOpen,setSearchOpen]=useState(false)
  const navigate=useNavigate()
  useEffect(()=>{
@@ -42,7 +48,7 @@ export function UtilityShell() {
   {active&&<ToolsSidebar active={active.slug} onSearch={()=>setSearchOpen(true)} />}
   <SidebarInset className="min-w-0">
    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 md:px-6">
-    <div className="flex min-w-0 items-center gap-2">{active?<><SidebarTrigger aria-label="Buka atau tutup daftar utilitas" /><Separator orientation="vertical" className="mx-1 h-5" /><Button role="link" nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link to="/" />}>Utilitas</Button><ChevronRightIcon className="hidden size-3 shrink-0 text-muted-foreground sm:block" /><span className="truncate text-xs">{active.title}</span></>:<Brand />}</div>
+    <div className="flex min-w-0 items-center gap-2">{active?<><SidebarTrigger aria-label="Buka atau tutup daftar utilitas" /><Separator orientation="vertical" className="mx-1 h-5" /><Button role="link" nativeButton={false} variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link to="/" />}>Utilitas</Button><ChevronRightIcon className="hidden size-3 shrink-0 text-muted-foreground sm:block" /><span className="truncate text-sm">{active.title}</span></>:<Brand />}</div>
     <nav aria-label="Navigasi utilitas" className="flex shrink-0 items-center gap-1">
      <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label="Cari utilitas (Ctrl+K)" onClick={()=>setSearchOpen(true)} />}><SearchIcon /></TooltipTrigger><TooltipContent>Cari utilitas · Ctrl+K</TooltipContent></Tooltip>
      <ThemeButton />
@@ -50,7 +56,7 @@ export function UtilityShell() {
     </nav>
    </header>
    <div id="utility-main" className="min-w-0 flex-1">{active?<div className="p-4 md:p-6"><Outlet /></div>:<Outlet />}</div>
-   <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 text-xs text-muted-foreground md:px-8"><span>XVII Dev / Utilitas</span><Button role="link" nativeButton={false} variant="link" size="xs" render={<a href="/" />}>Kembali ke beranda</Button></footer>
+   <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 text-sm text-muted-foreground md:px-8"><span>XVII Dev / Utilitas</span><Button role="link" nativeButton={false} variant="link" size="xs" render={<a href="/" />}>Kembali ke beranda</Button></footer>
   </SidebarInset>
   <CommandDialog open={searchOpen} onOpenChange={setSearchOpen} title="Cari utilitas" description="Temukan dan buka alat yang ingin digunakan.">
    <CommandInput aria-label="Cari utilitas di semua alat" placeholder="Cari utilitas…" />

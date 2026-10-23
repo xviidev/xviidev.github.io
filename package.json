@@ -11,12 +11,13 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "npm run dev --workspace=@xviidev/web -- --host 127.0.0.1",
+    "dev": "npm run dev -w @xviidev/utilities",
     "check": "npm run check:ui && npm run check --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspace=@xviidev/web",
-    "preview": "npm run preview --workspace=@xviidev/web -- --host 127.0.0.1",
-    "check:ui": "node scripts/check-ui.mjs"
+    "build": "node scripts/build.mjs",
+    "preview": "vite preview --config scripts/preview.config.ts",
+    "check:ui": "node scripts/check-ui.mjs",
+    "dev:web": "npm run dev -w @xviidev/web -- --host 127.0.0.1"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

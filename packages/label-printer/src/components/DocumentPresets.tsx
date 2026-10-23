@@ -77,23 +77,23 @@ export function DocumentPresets({ settings, document, onApply, children }: Props
         <Field className="min-w-0 flex-1 basis-48"><FieldLabel htmlFor="document-preset">Preset dokumen</FieldLabel><SelectInput id="document-preset" className="w-full" disabled={busy} value={active} onValueChange={id => { void choose(id) }} options={presets.map(preset => ({ value: preset.id, label: preset.name }))} /></Field>
         <Button variant="outline" disabled={busy} onClick={() => setOpen(true)}><SlidersHorizontalIcon />Atur preset</Button>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{selected?.description || 'Ukuran kertas, susunan label, dan format baris dalam satu preset.'}</p>
-      {dirty && <p className="mt-2 text-xs text-muted-foreground">Ada perubahan preset yang belum disimpan. Buka Atur preset untuk menyimpannya sebelum berpindah preset.</p>}
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{selected?.description || 'Ukuran kertas, susunan label, dan format baris dalam satu preset.'}</p>
+      {dirty && <p className="mt-2 text-sm text-muted-foreground">Ada perubahan preset yang belum disimpan. Buka Atur preset untuk menyimpannya sebelum berpindah preset.</p>}
     </div>
     {error && !open && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
     <Sheet open={open} onOpenChange={value => { setOpen(value); setConfirmDelete(false) }}>
       <SheetContent className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         <SheetHeader className="pb-4"><SheetTitle>Atur preset dokumen</SheetTitle><SheetDescription>Siapkan ukuran lembar dan format baris sekali. Untuk membuat preset baru, beri nama lalu pilih Simpan sebagai baru.</SheetDescription></SheetHeader>
         <div className="flex flex-col gap-6 px-6 pb-8 sm:px-8">
-          <div className="flex items-start gap-3 rounded-lg bg-muted p-3 text-xs leading-relaxed"><ShieldCheckIcon className="size-4 shrink-0" /><p>Disimpan hanya di browser ini, tanpa isi label atau daftar penerima. Menghapus data browser juga menghapus preset. Gunakan cadangan JSON untuk memindahkannya.</p></div>
+          <div className="flex items-start gap-3 rounded-lg bg-muted p-3 text-sm leading-relaxed"><ShieldCheckIcon className="size-4 shrink-0" /><p>Disimpan hanya di browser ini, tanpa isi label atau daftar penerima. Menghapus data browser juga menghapus preset. Gunakan cadangan JSON untuk memindahkannya.</p></div>
           <Field><FieldLabel htmlFor="preset-name">Nama preset</FieldLabel><Input id="preset-name" maxLength={80} value={name} onChange={event => setName(event.target.value)} placeholder="Contoh: Label alamat toko" /><FieldDescription>Gunakan nama yang mudah dikenali saat mencetak lagi.</FieldDescription></Field>
           <Field><FieldLabel htmlFor="preset-description">Keterangan</FieldLabel><Input id="preset-description" maxLength={240} value={description} onChange={event => setDescription(event.target.value)} placeholder="Contoh: Kertas stiker A4, 3 kolom, nama dicetak tebal" /><FieldDescription>Jelaskan ukuran, jenis kertas, atau kegunaan preset ini.</FieldDescription></Field>
           {children}
           <div className="sticky bottom-0 -mx-6 border-t border-border bg-popover px-6 py-4 sm:-mx-8 sm:px-8">
             {error && <Alert variant="destructive" className="mb-3"><AlertDescription>{error}</AlertDescription></Alert>}
-            {message && <p role="status" className="mb-3 text-xs leading-relaxed">{message}</p>}
+            {message && <p role="status" className="mb-3 text-sm leading-relaxed">{message}</p>}
             <div className="flex flex-wrap gap-2"><Button disabled={busy || !name.trim()} onClick={() => { void save(false) }}><SaveIcon />Simpan perubahan</Button><Button variant="outline" disabled={busy || !name.trim()} onClick={() => { void save(true) }}><CopyIcon />Simpan sebagai baru</Button></div>
-            <div className="mt-3 flex flex-wrap items-center gap-2"><Button variant="ghost" size="sm" disabled={busy || presets.length <= 1} onClick={() => { void remove() }}><Trash2Icon />{confirmDelete ? 'Ya, hapus preset ini' : 'Hapus preset'}</Button>{confirmDelete && <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Batal</Button>}<span className="text-xs text-muted-foreground">{dirty ? 'Perubahan belum disimpan' : 'Preset siap digunakan'}</span></div>
+            <div className="mt-3 flex flex-wrap items-center gap-2"><Button variant="ghost" size="sm" disabled={busy || presets.length <= 1} onClick={() => { void remove() }}><Trash2Icon />{confirmDelete ? 'Ya, hapus preset ini' : 'Hapus preset'}</Button>{confirmDelete && <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Batal</Button>}<span className="text-sm text-muted-foreground">{dirty ? 'Perubahan belum disimpan' : 'Preset siap digunakan'}</span></div>
           </div>
         </div>
       </SheetContent>

@@ -1,0 +1,27 @@
+{
+  "name": "@xviidev/utilities",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4326",
+    "check": "tsc --noEmit",
+    "build": "vite build && node scripts/generate-pages.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 4327"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.170.45",
+    "@xviidev/label-printer": "*",
+    "@xviidev/ui": "*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5"
+  }
+}
