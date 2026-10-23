@@ -1,6 +1,6 @@
 import { $applyFontSize } from '../lib/editor-format'
 import { ToggleGroup, ToggleGroupItem } from '@xviidev/ui/components/toggle-group'
-import { Input } from '@xviidev/ui/components/input'
+import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText } from '@xviidev/ui/components/input-group'
 import { BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon } from '@xviidev/ui/lib/icons'
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
@@ -118,8 +118,8 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
       <ToggleGroupItem value="bold" aria-label="Tebal" title="Tebal (Ctrl+B)" onMouseDown={event => event.preventDefault()}><BoldIcon /></ToggleGroupItem>
       <ToggleGroupItem value="italic" aria-label="Miring" title="Miring (Ctrl+I)" onMouseDown={event => event.preventDefault()}><ItalicIcon /></ToggleGroupItem>
     </ToggleGroup>
-    <div className="mx-0.5 flex items-center gap-1 border-x border-border px-1">
-      <Input className="h-8 w-14 px-1 text-center" type="number" aria-label="Ukuran huruf" title="Ukuran huruf, 4–100 pt" min={4} max={100} step={0.5} value={size} onFocus={() => {
+    <InputGroup className="mx-0.5 h-8 w-22">
+      <InputGroupInput className="h-8 text-center" type="number" aria-label="Ukuran huruf" title="Ukuran huruf, 4–100 pt" min={4} max={100} step={0.5} value={size} onFocus={() => {
         editingSize.current = true
         sizeSelection.current = savedSelection.current?.clone() ?? null
       }} onChange={event => {
@@ -128,8 +128,8 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
       }} onBlur={() => commitSize()} onKeyDown={event => {
         if (event.key === 'Enter') { event.preventDefault(); commitSize(true) }
       }} />
-      <span className="text-sm text-muted-foreground">pt</span>
-    </div>
+      <InputGroupAddon align="inline-end"><InputGroupText>pt</InputGroupText></InputGroupAddon>
+    </InputGroup>
     <ToggleGroup size="icon-sm" spacing={1} aria-label="Perataan paragraf" value={[align]} onValueChange={values => { const value = values[0]; if (value === 'left' || value === 'center' || value === 'right') editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value) }}>
       {([{ value: 'left', label: 'kiri', icon: AlignLeftIcon }, { value: 'center', label: 'tengah', icon: AlignCenterIcon }, { value: 'right', label: 'kanan', icon: AlignRightIcon }] as const).map(({ value, label, icon: Icon }) => <ToggleGroupItem key={value} value={value} aria-label={`Rata ${label}`} title={`Rata ${label}`} onMouseDown={event => event.preventDefault()}><Icon /></ToggleGroupItem>)}
     </ToggleGroup>

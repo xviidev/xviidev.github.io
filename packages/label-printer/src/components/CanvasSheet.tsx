@@ -18,7 +18,7 @@ export function CanvasSheet({ model, page, fonts, settings: s, width, columns, r
         {Array.from({ length: columns * rows }, (_, index) => <Rect key={index}
           x={(s.marginLeft + (index % columns) * (s.labelWidth + s.gapX)) * PT_PER_MM}
           y={(s.marginTop + Math.floor(index / columns) * (s.labelHeight + s.gapY)) * PT_PER_MM}
-          width={labelWidth} height={labelHeight} stroke={s.border ? '#222' : '#ddd'} strokeWidth={0.5} dash={s.border ? undefined : [2, 2]} listening={false} />)}
+          width={labelWidth} height={labelHeight} stroke={s.border ? '#222' : '#737373'} strokeWidth={s.border ? 0.5 : 1} strokeScaleEnabled={s.border} dash={s.border ? undefined : [5, 4]} listening={false} />)}
         {model.pages[page]?.map(slot => <Group key={slot.index} x={slot.x} y={slot.y}>
           {slot.label.overflow && <Rect width={labelWidth} height={labelHeight} fill="#fef2f2" stroke="#dc2626" strokeWidth={0.7} listening={false} />}
           <Group draggable={draggable} onDragEnd={event => {

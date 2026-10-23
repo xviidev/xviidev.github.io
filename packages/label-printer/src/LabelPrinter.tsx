@@ -1,3 +1,6 @@
+import { MeasurementHelp } from './components/MeasurementHelp'
+import type { MeasurementKind } from './components/MeasurementHelp'
+import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText } from '@xviidev/ui/components/input-group'
 import { applyPaperPreset, paperSettings } from './lib/presets'
 import { Separator } from '@xviidev/ui/components/separator'
 import { DocumentPresets } from './components/DocumentPresets'
@@ -30,9 +33,14 @@ import { decodeTemplate } from './lib/template-file'
 import type { DocumentPreset } from './lib/presets'
 
 interface WorkbookSheet { sheet: string; data: unknown[][] }
-function NumberField({ label, value, onChange, min = 0, step = 0.1, max = 1000 }: { label: string; value: number; onChange: (value: number) => void; min?: number; step?: number; max?: number }) {
+function NumberField({ label, value, onChange, min = 0, step = 0.1, max = 1000, unit, help }: { label: string; value: number; onChange: (value: number) => void; min?: number; step?: number; max?: number; unit?: string; help?: MeasurementKind }) {
   const id = useId()
-  return <Field><FieldLabel htmlFor={id}>{label}</FieldLabel><Input id={id} type="number" min={min} max={max} step={step} value={Number.isFinite(value) ? value : ''} onChange={event => onChange(Number(event.target.value))} /></Field>
+  const suffix = unit ?? (label.endsWith(' (mm)') ? 'mm' : undefined)
+  const title = label.replace(/ \(mm\)$/, '')
+  return <Field><FieldLabel htmlFor={id}>{title}</FieldLabel><InputGroup>
+    <InputGroupInput id={id} aria-label={label} type="number" min={min} max={max} step={step} value={Number.isFinite(value) ? value : ''} onChange={event => onChange(Number(event.target.value))} />
+    {(suffix || help) && <InputGroupAddon align="inline-end">{suffix && <InputGroupText>{suffix}</InputGroupText>}{help && <MeasurementHelp kind={help} label={title} value={value} />}</InputGroupAddon>}
+  </InputGroup></Field>
 }
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob), link = document.createElement('a')
@@ -183,7 +191,7 @@ export default function LabelPrinter() {
     <DocumentPresets settings={settings} onApply={applyDocumentPreset}>
       <Card size="sm" aria-labelledby="layout-title"><CardHeader><CardTitle id="layout-title" role="heading" aria-level={2}><RulerIcon className="mr-2 inline size-4" />Kertas &amp; ukuran</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
             <Field className=""><FieldLabel htmlFor="label-setting-2">Isi cepat ukuran lembar</FieldLabel><SelectInput id="label-setting-2" className="w-full" value={preset} onValueChange={selectPreset} options={[{value:'24',label:'A4 · 24 label · 63,5 × 33,9 mm'},{value:'21',label:'A4 · 21 label · 63,5 × 38,1 mm'},{value:'custom',label:'Ukuran sendiri'}]} /></Field>
-            <p className="hint mb-4">Ukur kertas stiker Anda dengan penggaris. Margin adalah jarak dari tepi kertas ke label pertama; jarak label adalah sela antarstiker. Semua ukuran dalam milimeter (mm).</p>
+            <p className="hint mb-4">Ukur kertas stiker Anda dengan penggaris. Margin adalah jarak dari tepi kertas ke label pertama; jarak label adalah sela antarstiker. Semua ukuran dalam milimeter (mm). Tekan ikon info di samping isian untuk melihat contoh.</p>
             <Field className=" mb-4"><FieldLabel htmlFor="label-setting-3">Kertas</FieldLabel><SelectInput id="label-setting-3" className="w-full" value={paperChoice} onValueChange={value => {
               setPaperChoice(value)
               const size = { a4: [210,297], a5:[148,210], letter:[215.9,279.4] }[value]
@@ -194,12 +202,12 @@ export default function LabelPrinter() {
               <NumberField label="Tinggi kertas (mm)" value={settings.paperHeight} onChange={value => update('paperHeight', value)} min={1} />
               <NumberField label="Lebar label (mm)" value={settings.labelWidth} onChange={value => update('labelWidth', value)} min={1} />
               <NumberField label="Tinggi label (mm)" value={settings.labelHeight} onChange={value => update('labelHeight', value)} min={1} />
-              <NumberField label="Margin atas (mm)" value={settings.marginTop} onChange={value => update('marginTop', value)} />
-              <NumberField label="Margin bawah (mm)" value={settings.marginBottom} onChange={value => update('marginBottom', value)} />
-              <NumberField label="Margin kiri (mm)" value={settings.marginLeft} onChange={value => update('marginLeft', value)} step={0.05} />
-              <NumberField label="Margin kanan (mm)" value={settings.marginRight} onChange={value => update('marginRight', value)} step={0.05} />
-              <NumberField label="Jarak mendatar (mm)" value={settings.gapX} onChange={value => update('gapX', value)} />
-              <NumberField label="Jarak menurun (mm)" value={settings.gapY} onChange={value => update('gapY', value)} />
+              <NumberField help="marginTop" label="Margin atas (mm)" value={settings.marginTop} onChange={value => update('marginTop', value)} />
+              <NumberField help="marginBottom" label="Margin bawah (mm)" value={settings.marginBottom} onChange={value => update('marginBottom', value)} />
+              <NumberField help="marginLeft" label="Margin kiri (mm)" value={settings.marginLeft} onChange={value => update('marginLeft', value)} step={0.05} />
+              <NumberField help="marginRight" label="Margin kanan (mm)" value={settings.marginRight} onChange={value => update('marginRight', value)} step={0.05} />
+              <NumberField help="gapX" label="Jarak mendatar (mm)" value={settings.gapX} onChange={value => update('gapX', value)} />
+              <NumberField help="gapY" label="Jarak menurun (mm)" value={settings.gapY} onChange={value => update('gapY', value)} />
             </FieldGroup>
             <p className="hint" aria-live="polite">{paperLayout.errors.length ? 'Periksa ukuran: ' + paperLayout.errors.join(' ') : `${paperLayout.columns} kolom × ${paperLayout.rows} baris = ${paperLayout.capacity} label per lembar.`}</p>
             <Button variant="link" size="sm" className=" mt-4" onClick={() => { setSettings(previous => ({ ...previous, paperWidth: previous.paperHeight, paperHeight: previous.paperWidth })); setPreset('custom'); setPaperChoice('custom') }}>Putar kertas</Button>
@@ -227,7 +235,7 @@ export default function LabelPrinter() {
            </TabsContent>
           </Tabs>
           {showTemplate && <p className="hint">Atur format baris dan pemetaan kolom di Desain label di bawah. {mode === 'excel' ? templateMessage : ''}</p>}
-          <div className="mt-5 grid grid-cols-2 gap-3"><NumberField label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3"><NumberField unit="kali" label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
         </FieldGroup></CardContent></Card>
         <Card size="sm" className="mt-4" aria-labelledby="design-title"><CardHeader><CardTitle id="design-title" role="heading" aria-level={2}><TypeIcon className="mr-2 inline size-4" />Desain label</CardTitle></CardHeader><CardContent>
           <p className="hint mb-4">Atur tebal, miring, ukuran huruf, dan perataan langsung di editor. Pengaturan di bawah berlaku untuk seluruh label dan tidak ikut disimpan dalam preset kertas.</p>
@@ -240,7 +248,7 @@ export default function LabelPrinter() {
         </FieldGroup><Separator className="my-5" /></>}
           <FieldGroup className="gap-4">
             <FieldGroup className="grid grid-cols-2 gap-3">
-              <NumberField label="Ruang dalam (mm)" value={settings.padding} onChange={value => update('padding', value)} />
+              <NumberField help="padding" label="Ruang dalam (mm)" value={settings.padding} onChange={value => update('padding', value)} />
               <Field className=""><FieldLabel htmlFor="label-setting-4">Huruf</FieldLabel><SelectInput id="label-setting-4" className="w-full" value={settings.font} onValueChange={value => update('font',value as LabelSettings['font'])} options={[{value:'sans',label:'Sans (Noto Sans)'},{value:'mono',label:'JetBrains Mono'}]} /></Field>
               <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><SelectInput id="label-setting-6" className="w-full" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /></Field>
             </FieldGroup>
