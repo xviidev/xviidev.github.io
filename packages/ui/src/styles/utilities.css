@@ -1,0 +1,18 @@
+@import '@fontsource-variable/geist-mono/wght.css';
+@import '@fontsource-variable/source-sans-3';
+
+html[data-app="utilities"] {
+  --ui-font-heading: 'Geist Mono Variable', monospace;
+  --muted-foreground: oklch(0.46 0 0);
+}
+html[data-app="utilities"].dark { --muted-foreground: oklch(0.76 0 0); }
+
+@layer base {
+  html[data-app="utilities"] {
+    font-family: 'Source Sans 3 Variable', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+  }
+}

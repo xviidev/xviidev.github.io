@@ -1,0 +1,5 @@
+@import '@xviidev/ui/styles.css';
+@import '@xviidev/ui/utilities.css';
+@import '@xviidev/label-printer/styles.css';
+@source '../../../../packages/ui/src';
+@source '../../../../packages/label-printer/src';

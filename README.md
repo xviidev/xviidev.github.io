@@ -1,39 +1,43 @@
 # XVII Dev
 
-Ismail's personal homepage, built with Astro and Tailwind CSS for https://xvii.dev.
-The original XVII Dev logo is preserved in `public/assets/logo.svg`.
-Pixerve and Evetry use their official SVG logos. JetBrains Mono is self-hosted via Fontsource.
+Monorepo untuk xvii.dev. Antarmuka tetap berbahasa Indonesia.
 
-## Development
+## Struktur
 
-Use Node.js 24 LTS (or Node.js >=22.23.4).
+- `apps/web`: homepage Astro.
+- `apps/utilities`: aplikasi utilitas React + Vite + TanStack Router.
+- `packages/ui`: komponen shadcn/ui bersama, preset `b6RfRCplyq`, tema, dan token desain.
+- `packages/label-printer`: utilitas cetak label, Lexical, pratinjau Konva, impor Excel, dan ekspor PDF.
+
+Satu package untuk satu utilitas, bukan satu kategori. Kategori hanya metadata pada katalog. Utilitas baru menggunakan komponen dari `@xviidev/ui`, bukan menyalinnya.
+
+## Pengembangan
+
+Node.js 24+. Jalankan dari root:
 
 ```sh
 npm ci
-npm run dev
-```
-
-## Validation and preview
-
-```sh
+npm run dev           # utilitas, port 4326
+npm run dev:web       # homepage, port 4321
 npm run check
+npm test
 npm run build
-npm run preview
 ```
 
-## Files
+Homepage: `/`; katalog: `/utilities/`; cetak label: `/utilities/labels/`.
 
-- `src/pages/index.astro`: homepage content.
-- `src/layouts/BaseLayout.astro`: shared page structure and metadata.
-- `src/styles/global.css`: responsive styling.
-- `src/pages/404.astro`: custom not-found page.
-- `src/pages/utilitas.astro`: placeholder for future utilities.
-- `public/`: original logo, favicon, and custom domain.
+Build menggabungkan `apps/web/dist` dan `apps/utilities/dist` ke `dist/` di root. `npm run preview` membuka hasil gabungan pada port 4325. GitHub Actions memvalidasi semua workspace dan menerbitkannya ke GitHub Pages dengan domain xvii.dev.
 
-## Deployment
+Data penerima diproses lokal di browser; tidak diunggah atau disimpan otomatis. Baris kosong memisahkan label manual, dan baris yang hanya berisi `-` diabaikan. Template dapat disimpan sebagai JSON tanpa data penerima. Cetak PDF pada skala 100% setelah menguji kecocokan dengan lembar label.
 
-GitHub Actions checks and builds pull requests. Pushes to `master` also deploy
-`dist/` to GitHub Pages. The site generates static HTML without client JavaScript.
+## Menambah utilitas
 
+Buat `packages/nama-utilitas` dengan satu entry React dan dependensi `@xviidev/ui`. Daftarkan metadata pada `apps/utilities/src/lib/metadata.ts`, lalu ikon dan pemuat entry package pada `apps/utilities/src/lib/utilities.ts`. Katalog, sidebar, pencarian cepat, route client, dan halaman statis GitHub Pages mengikuti daftar ini secara otomatis. Tema dan komponen tetap di `packages/ui`; utilitas memakai Source Sans 3 untuk body dan Geist Mono untuk heading, label dengan huruf biasa, dan jarak huruf normal. Font dokumen cetak terpisah dari font aplikasi. Untuk menambah komponen bersama: `npx shadcn@latest add <component> -c apps/utilities`.
 
+## Layout utilitas
 
+Aplikasi utilitas berdiri sendiri dengan entry React di `apps/utilities/src/main.tsx`; homepage tetap memakai Astro. Katalog memiliki pencarian, tab kategori, dan kartu utilitas. Di halaman alat, `UtilityShell` menyediakan sidebar, pencarian cepat (Ctrl+K), tema, dan navigasi yang sama untuk setiap package. Metadata ringan diekspor oleh masing-masing utilitas; halaman statis dibuat dari daftar metadata dan implementasi dimuat saat diperlukan.
+
+Semua kontrol menggunakan `packages/ui`, termasuk Select (bukan NativeSelect), Tabs, Button, Input, Checkbox, Accordion, dan Sidebar. `npm run check:ui` memeriksa kontrak ini pada semua package utilitas.
+
+Preset dokumen cetak label disimpan di IndexedDB melalui Dexie. Preset mencakup nama, keterangan, ukuran kertas, ukuran label, margin, dan jarak antarlabel; isi label dan data penerima tidak disimpan. Cadangan preset dapat diekspor/impor sebagai JSON melalui panel Atur preset. Menghapus data browser menghapus preset. Path `/utilitas/`, `/utilitas/cetak-label/`, `/utilitas/label-printer/`, dan `/utilities/label-printer/` dialihkan ke alamat baru. Migrasi Dexie v2 mempertahankan preset kertas dan menyimpan salinan data v1 pada tabel legacyPresets. Format teks dan posisi blok hanya diatur melalui panel Desain label, terpisah dari preset kertas. Ukuran huruf diterapkan langsung pada seleksi atau baris aktif, termasuk teks baru pada baris kosong. Semua panel utilitas menggunakan sudut lancip.
