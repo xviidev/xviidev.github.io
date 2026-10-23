@@ -56,7 +56,7 @@ test('SVG exports a square with an opaque quiet zone and correct module bounds',
 test('all styled SVG patterns and embedded logos decode independently at small and large sizes',()=>{
   const logo = 'data:image/png;base64,' + new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#111"/><circle cx="16" cy="16" r="8" fill="white"/></svg>',{font:{loadSystemFonts:false}}).render().asPng().toString('base64')
   for(const shape of ['square','rounded','dots'] as const) for(const size of [256,1024]) for(const image of [undefined,logo]) {
-    for(const text of ['https://xvii.dev/', 'Seni rupa 🌱', 'WIFI:T:WPA;S:Studio;P:contoh123;;']) {
+    for(const text of ['https://xvii.dev/', 'Seni rupa 🌱', 'WIFI:T:WPA;S:Studio;P:contoh123;;', 'https://example.com/?q=' + 'example'.repeat(35)]) {
       const options={...DEFAULT_APPEARANCE,shape,size,logo:image}
       const matrix=createMatrix(text,options)
       const raster=new Resvg(svgCode(matrix,options),{font:{loadSystemFonts:false}}).render()

@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { ToggleGroup, ToggleGroupItem } from '@xviidev/ui/components/toggle-group'
 import { Input } from '@xviidev/ui/components/input'
 import { Button } from '@xviidev/ui/components/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@xviidev/ui/components/card'
@@ -13,6 +14,10 @@ import { Alert, AlertDescription } from '@xviidev/ui/components/alert'
 import { QrCodeIcon, LinkIcon, WifiIcon, MessageCircleIcon, PaletteIcon, DownloadIcon, InfoIcon, EyeIcon, EyeOffIcon, ShieldCheckIcon } from '@xviidev/ui/lib/icons'
 import { EMPTY_CONTENT, DEFAULT_APPEARANCE, payload, createMatrix, svgCode, pngBlob, readLogo } from './lib/qr'
 import type { Mode, Level, Shape } from './lib/qr'
+const STYLE_SAMPLES = ([{shape:'square',label:'Kotak'},{shape:'rounded',label:'Membulat'},{shape:'dots',label:'Titik'}] as const).map(item=>{
+  const options={...DEFAULT_APPEARANCE,shape:item.shape}
+  return {...item,src:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgCode(createMatrix('https://xvii.dev/',options),options))}`}
+})
 function Help({ title, children }: { title: string; children: string }) {
   return <Popover><PopoverTrigger render={<InputGroupButton size="icon-xs" aria-label={`Petunjuk ${title.toLowerCase()}`} />}><InfoIcon /></PopoverTrigger><PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)]"><PopoverHeader><PopoverTitle>{title}</PopoverTitle><PopoverDescription>{children}</PopoverDescription></PopoverHeader></PopoverContent></Popover>
 }
@@ -72,7 +77,9 @@ export default function QrCode() {
           </Tabs>
         </CardContent></Card>
         <Card size="sm"><CardHeader><CardTitle role="heading" aria-level={2}>Bentuk &amp; logo</CardTitle><CardDescription>Ubah karakter pola dan tambahkan identitas Anda.</CardDescription></CardHeader><CardContent><FieldGroup className="gap-5">
-          <Field><FieldLabel htmlFor="qr-shape">Bentuk pola</FieldLabel><SelectInput id="qr-shape" className="w-full" value={appearance.shape} onValueChange={value=>setAppearance(previous=>({...previous,shape:value as Shape}))} options={[{value:'square',label:'Kotak klasik'},{value:'rounded',label:'Sudut membulat'},{value:'dots',label:'Titik / lingkaran'}]} /><FieldDescription>Tiga penanda besar di sudut tetap kotak agar mudah dikenali pemindai.</FieldDescription></Field>
+          <Field><FieldLabel id="qr-shape-label">Bentuk pola</FieldLabel><ToggleGroup aria-labelledby="qr-shape-label" className="grid w-full grid-cols-3" value={[appearance.shape]} onValueChange={values=>{if(values[0])setAppearance(previous=>({...previous,shape:values[0] as Shape}))}}>
+            {STYLE_SAMPLES.map(({shape,label,src})=><ToggleGroupItem key={shape} value={shape} className="h-auto min-w-0 flex-col gap-2 px-2 py-3" aria-label={label}><img src={src} width={80} height={80} className="aspect-square w-full max-w-20" alt="" aria-hidden="true" /><span>{label}</span></ToggleGroupItem>)}
+          </ToggleGroup><FieldDescription>Contoh memakai gaya asli, termasuk penanda sudutnya. Pola titik diberi sela; ujung pola membulat mengikuti sambungannya.</FieldDescription></Field>
           <Field><FieldLabel htmlFor="qr-logo">Logo atau ikon (opsional)</FieldLabel><Input id="qr-logo" type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={event=>{void uploadLogo(event.target.files?.[0]);event.target.value=''}} /><FieldDescription>PNG, JPG, atau WebP, maksimal 2 MB. Gambar transparan didukung; logo tetap di perangkat Anda.</FieldDescription></Field>
           {uploading && <p role="status" className="text-sm text-muted-foreground">Menyiapkan logo…</p>}
           {appearance.logo && <><div className="flex items-center gap-4"><img src={appearance.logo} width={48} height={48} className="size-12 object-contain" alt="Logo yang dipilih" /><Button variant="outline" size="sm" onClick={()=>{uploadVersion.current++;setUploading(false);setAppearance(previous=>({...previous,logo:undefined}));setExportError('')}}>Hapus logo</Button></div><Field><FieldLabel htmlFor="qr-logo-size">Ukuran logo</FieldLabel><SelectInput id="qr-logo-size" className="w-full" value={String(appearance.logoScale)} onValueChange={value=>setAppearance(previous=>({...previous,logoScale:Number(value)}))} options={[{value:'12',label:'Kecil (12%)'},{value:'16',label:'Sedang (16%)'},{value:'18',label:'Besar (18%)'}]} /><FieldDescription>Logo dipusatkan dengan ruang pemisah. Koreksi H otomatis digunakan. Tetap uji pindai sebelum dibagikan.</FieldDescription></Field></>}

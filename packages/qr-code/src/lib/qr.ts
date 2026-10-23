@@ -55,16 +55,47 @@ export function svgCode(matrix: Matrix, options: Appearance) {
   validateAppearance(options)
   const side = matrix.size + 8
   let path = '', shapes = ''
-  for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) {
-    if (!matrix.data[y * matrix.size + x]) continue
+  const dark = (x: number, y: number) => x >= 0 && y >= 0 && x < matrix.size && y < matrix.size && !!matrix.data[y * matrix.size + x]
+  const alignmentCenters: [number, number][] = []
+  const alignmentCells = new Set<number>()
+  if (options.shape !== 'square') for (let y = 2; y < matrix.size - 2; y++) for (let x = 2; x < matrix.size - 2; x++) {
+    if (!dark(x, y) || !matrix.protected?.[y * matrix.size + x] || finderModule(x, y, matrix.size)) continue
+    let matches = true
+    for (let dy = -2; dy <= 2 && matches; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const expected = Math.abs(dx) === 2 || Math.abs(dy) === 2 || (dx === 0 && dy === 0)
+      if (!matrix.protected[(y + dy) * matrix.size + x + dx] || dark(x + dx, y + dy) !== expected) { matches = false; break }
+    }
+    if (matches) { alignmentCenters.push([x, y]); for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) alignmentCells.add((y + dy) * matrix.size + x + dx) }
+  }
+  function roundedModule(x: number, y: number) {
     const a = x + 4, b = y + 4
-    if (options.shape === 'square' || matrix.protected?.[y * matrix.size + x] || finderModule(x, y, matrix.size)) path += `M${a} ${b}h1v1h-1z`
-    else if (options.shape === 'dots') shapes += `<circle cx="${a + 0.5}" cy="${b + 0.5}" r="0.5"/>`
-    else shapes += `<rect x="${a}" y="${b}" width="1" height="1" rx="0.28"/>`
+    const tl = !dark(x - 1, y) && !dark(x, y - 1) ? 0.5 : 0
+    const tr = !dark(x + 1, y) && !dark(x, y - 1) ? 0.5 : 0
+    const br = !dark(x + 1, y) && !dark(x, y + 1) ? 0.5 : 0
+    const bl = !dark(x - 1, y) && !dark(x, y + 1) ? 0.5 : 0
+    return `M${a + tl} ${b}H${a + 1 - tr}Q${a + 1} ${b} ${a + 1} ${b + tr}V${b + 1 - br}Q${a + 1} ${b + 1} ${a + 1 - br} ${b + 1}H${a + bl}Q${a} ${b + 1} ${a} ${b + 1 - bl}V${b + tl}Q${a} ${b} ${a + tl} ${b}Z`
+  }
+  for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) {
+    if (!dark(x, y)) continue
+    const a = x + 4, b = y + 4
+    if (options.shape === 'square') path += `M${a} ${b}h1v1h-1z`
+    else if (finderModule(x, y, matrix.size) || alignmentCells.has(y * matrix.size + x)) continue
+    else if (options.shape === 'dots' && !matrix.protected?.[y * matrix.size + x]) shapes += `<circle cx="${a + 0.5}" cy="${b + 0.5}" r="0.41"/>`
+    else path += roundedModule(x, y)
+  }
+  // Keep the 1:1:3:1:1 finder proportions while styling their outlines as complete shapes.
+  if (options.shape !== 'square') for (const [x, y] of [[4, 4], [matrix.size - 3, 4], [4, matrix.size - 3]]) {
+    if (options.shape === 'dots') shapes += `<circle cx="${x + 3.5}" cy="${y + 3.5}" r="3.5"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="2.5" fill="${options.background}"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="1.5"/>`
+    else shapes += `<rect x="${x}" y="${y}" width="7" height="7" rx="1.5"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="0.9" fill="${options.background}"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.65"/>`
+  }
+  for (const [x, y] of alignmentCenters) {
+    const cx = x + 4.5, cy = y + 4.5
+    if (options.shape === 'dots') shapes += `<circle cx="${cx}" cy="${cy}" r="2.5"/><circle cx="${cx}" cy="${cy}" r="1.5" fill="${options.background}"/><circle cx="${cx}" cy="${cy}" r="0.5"/>`
+    else shapes += `<rect x="${cx - 2.5}" y="${cy - 2.5}" width="5" height="5" rx="1"/><rect x="${cx - 1.5}" y="${cy - 1.5}" width="3" height="3" rx="0.5" fill="${options.background}"/><rect x="${cx - 0.5}" y="${cy - 0.5}" width="1" height="1" rx="0.3"/>`
   }
   const box = matrix.size * options.logoScale / 100, position = (side - box) / 2, inset = box * 0.12
   const logo = options.logo ? `<rect x="${position}" y="${position}" width="${box}" height="${box}" fill="${options.background}"/><image href="${options.logo}" x="${position + inset}" y="${position + inset}" width="${box - inset * 2}" height="${box - inset * 2}" preserveAspectRatio="xMidYMid meet"/>` : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${options.size}" height="${options.size}" viewBox="0 0 ${side} ${side}"><rect width="${side}" height="${side}" fill="${options.background}"/><path d="${path}" fill="${options.foreground}" shape-rendering="crispEdges"/><g fill="${options.foreground}">${shapes}</g>${logo}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${options.size}" height="${options.size}" viewBox="0 0 ${side} ${side}"><rect width="${side}" height="${side}" fill="${options.background}"/><path d="${path}" fill="${options.foreground}" shape-rendering="${options.shape === 'square' ? 'crispEdges' : 'geometricPrecision'}"/><g fill="${options.foreground}">${shapes}</g>${logo}</svg>`
 }
 // Integer module pixels preserve sharp edges, with at least four clear modules on every side.
 export function rasterGeometry(matrix: Matrix, size: number) {
