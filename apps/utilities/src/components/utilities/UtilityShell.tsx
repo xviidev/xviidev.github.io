@@ -7,7 +7,7 @@ import { Separator } from '@xviidev/ui/components/separator'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger, useSidebar } from '@xviidev/ui/components/sidebar'
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@xviidev/ui/components/command'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@xviidev/ui/components/tooltip'
-import { ArrowLeftIcon, ChevronRightIcon, CodeIcon, LayoutGridIcon, MoonIcon, SearchIcon, SunIcon } from '@xviidev/ui/lib/icons'
+import { ArrowLeftIcon, ChevronRightIcon, LayoutGridIcon, MoonIcon, SearchIcon, SunIcon } from '@xviidev/ui/lib/icons'
 import { categories, utilities } from '../../lib/utilities'
 function ThemeButton() {
  const [dark,setDark]=useState(()=>document.documentElement.classList.contains('dark'))
@@ -52,7 +52,6 @@ export function UtilityShell() {
     <nav aria-label="Navigasi utilitas" className="flex shrink-0 items-center gap-1">
      <Tooltip><TooltipTrigger render={<Button variant="ghost" size="icon" aria-label="Cari utilitas (Ctrl+K)" onClick={()=>setSearchOpen(true)} />}><SearchIcon /></TooltipTrigger><TooltipContent>Cari utilitas · Ctrl+K</TooltipContent></Tooltip>
      <ThemeButton />
-     <Button role="link" nativeButton={false} variant="ghost" size="icon" aria-label="Kode sumber di GitHub" render={<a href="https://github.com/xviidev/xviidev.github.io" target="_blank" rel="noreferrer" />}><CodeIcon /></Button>
     </nav>
    </header>
    <div id="utility-main" className="min-w-0 flex-1">{active?<div className="p-4 md:p-6"><Outlet /></div>:<Outlet />}</div>

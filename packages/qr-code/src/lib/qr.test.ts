@@ -1,8 +1,19 @@
+import { BinaryBitmap, GlobalHistogramBinarizer, RGBLuminanceSource, QRCodeReader, DecodeHintType } from '@zxing/library'
 import { Resvg } from '@resvg/resvg-js'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import jsQR from 'jsqr'
 import { payload, createMatrix, rasterGeometry, svgCode, validateAppearance, EMPTY_CONTENT, DEFAULT_APPEARANCE } from './qr.ts'
+// Generated artwork has a clean, high-contrast background. A global-threshold reader
+// also verifies high-resolution dots that jsQR's local threshold can misclassify.
+function decodeRaster(pixels: Uint8Array | Uint8ClampedArray, width: number, height: number): string | undefined {
+  const first = jsQR(new Uint8ClampedArray(pixels), width, height)?.data
+  if (first !== undefined) return first
+  const grayscale = new Uint8ClampedArray(width * height)
+  for (let i = 0; i < grayscale.length; i++) grayscale[i] = (pixels[i * 4] + 2 * pixels[i * 4 + 1] + pixels[i * 4 + 2]) / 4
+  try { return new QRCodeReader().decode(new BinaryBitmap(new GlobalHistogramBinarizer(new RGBLuminanceSource(grayscale, width, height))), new Map([[DecodeHintType.TRY_HARDER, true]])).getText() }
+  catch { return undefined }
+}
 function decode(text: string) {
   const options = DEFAULT_APPEARANCE, matrix = createMatrix(text, options), side = options.size
   const pixels = new Uint8ClampedArray(side * side * 4).fill(255)
@@ -60,7 +71,7 @@ test('all styled SVG patterns and embedded logos decode independently at small a
       const options={...DEFAULT_APPEARANCE,shape,size,logo:image}
       const matrix=createMatrix(text,options)
       const raster=new Resvg(svgCode(matrix,options),{font:{loadSystemFonts:false}}).render()
-      assert.equal(jsQR(new Uint8ClampedArray(raster.pixels),raster.width,raster.height)?.data,text,`${shape} / ${size} / logo=${!!image} / ${text}`)
+      assert.equal(decodeRaster(raster.pixels,raster.width,raster.height),text,`${shape} / ${size} / logo=${!!image} / ${text}`)
     }
   }
 })
@@ -95,18 +106,15 @@ test('dot mode renders separate full circles even for protected consecutive modu
   }
 })
 
-test('interior alignment markers remain a subtle dotted square in both styled modes',()=>{
-  const size=25,data=new Uint8Array(size*size),reserved=new Uint8Array(size*size)
-  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++) {
-    reserved[(18+dy)*size+18+dx]=1
-    if(Math.abs(dx)===2||Math.abs(dy)===2||(dx===0&&dy===0))data[(18+dy)*size+18+dx]=1
+test('alignment modules use exactly the same geometry as ordinary modules',()=>{
+  const size=33,data=new Uint8Array(size*size),reserved=new Uint8Array(size*size)
+  for(const [cx,cy,isReserved] of [[12,12,false],[24,24,true]] as const) for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++) {
+    reserved[(cy+dy)*size+cx+dx]=isReserved?1:0
+    if(Math.abs(dx)===2||Math.abs(dy)===2||(dx===0&&dy===0))data[(cy+dy)*size+cx+dx]=1
   }
   for(const shape of ['dots','rounded'] as const) {
-    const rendered=new Resvg(svgCode({size,data,protected:reserved},{...DEFAULT_APPEARANCE,shape}),{font:{loadSystemFonts:false}}).render()
-    const sample=(x:number,y:number)=>rendered.pixels[(Math.floor(y/33*rendered.height)*rendered.width+Math.floor(x/33*rendered.width))*4]
-    assert(sample(20.5,20.5)<40,'corner dot must remain present')
-    assert(sample(22.5,22.5)<40,'center dot must remain present')
-    assert(sample(21,20.1)>240,'border dots must remain individually round')
-    assert(sample(21.5,21.5)>240,'inner white ring must remain clear')
+    const rendered=new Resvg(svgCode({size,data,protected:reserved},{...DEFAULT_APPEARANCE,shape,size:2048}),{font:{loadSystemFonts:false}}).render()
+    const sample=(x:number,y:number)=>rendered.pixels[(Math.floor(y/41*rendered.height)*rendered.width+Math.floor(x/41*rendered.width))*4]
+    for(const [dx,dy] of [[0,0],[-2,-2],[-1.5,-2.4],[-2.4,-2.4],[-1,-1]])assert(Math.abs(sample(16.5+dx,16.5+dy)-sample(28.5+dx,28.5+dy))<12,'reserved modules must match ordinary modules')
   }
 })
