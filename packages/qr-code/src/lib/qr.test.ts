@@ -1,3 +1,4 @@
+import { Resvg } from '@resvg/resvg-js'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import jsQR from 'jsqr'
@@ -50,4 +51,22 @@ test('SVG exports a square with an opaque quiet zone and correct module bounds',
   const coordinates=[...svg.matchAll(/M(\d+) (\d+)h1v1h-1z/g)]
   assert.equal(coordinates.length,matrix.data.filter(Boolean).length)
   for(const [,x,y] of coordinates) {assert(Number(x)>=4&&Number(x)<matrix.size+4);assert(Number(y)>=4&&Number(y)<matrix.size+4)}
+})
+
+test('all styled SVG patterns and embedded logos decode independently at small and large sizes',()=>{
+  const logo = 'data:image/png;base64,' + new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#111"/><circle cx="16" cy="16" r="8" fill="white"/></svg>',{font:{loadSystemFonts:false}}).render().asPng().toString('base64')
+  for(const shape of ['square','rounded','dots'] as const) for(const size of [256,1024]) for(const image of [undefined,logo]) {
+    for(const text of ['https://xvii.dev/', 'Seni rupa 🌱', 'WIFI:T:WPA;S:Studio;P:contoh123;;']) {
+      const options={...DEFAULT_APPEARANCE,shape,size,logo:image}
+      const matrix=createMatrix(text,options)
+      const raster=new Resvg(svgCode(matrix,options),{font:{loadSystemFonts:false}}).render()
+      assert.equal(jsQR(new Uint8ClampedArray(raster.pixels),raster.width,raster.height)?.data,text,`${shape} / ${size} / logo=${!!image} / ${text}`)
+    }
+  }
+})
+test('logo data rejects SVG and external links; enabled logos force H correction',()=>{
+  for(const logo of ['https://example.com/icon.png','data:image/svg+xml;base64,PHN2Zz4=','data:image/png;base64,abc"/>']) assert.throws(()=>validateAppearance({...DEFAULT_APPEARANCE,logo}))
+  assert.throws(()=>validateAppearance({...DEFAULT_APPEARANCE,logoScale:50}))
+  const logo='data:image/png;base64,iVBORw0KGgo='
+  assert.deepEqual(createMatrix('https://xvii.dev/',{...DEFAULT_APPEARANCE,logo}),createMatrix('https://xvii.dev/',{...DEFAULT_APPEARANCE,level:'H'}))
 })

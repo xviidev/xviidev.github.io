@@ -1,4 +1,5 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { Input } from '@xviidev/ui/components/input'
 import { Button } from '@xviidev/ui/components/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@xviidev/ui/components/card'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@xviidev/ui/components/field'
@@ -10,8 +11,8 @@ import { Popover, PopoverTrigger, PopoverContent, PopoverHeader, PopoverTitle, P
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@xviidev/ui/components/empty'
 import { Alert, AlertDescription } from '@xviidev/ui/components/alert'
 import { QrCodeIcon, LinkIcon, WifiIcon, MessageCircleIcon, PaletteIcon, DownloadIcon, InfoIcon, EyeIcon, EyeOffIcon, ShieldCheckIcon } from '@xviidev/ui/lib/icons'
-import { EMPTY_CONTENT, DEFAULT_APPEARANCE, payload, createMatrix, svgCode, pngBlob } from './lib/qr'
-import type { Mode, Level } from './lib/qr'
+import { EMPTY_CONTENT, DEFAULT_APPEARANCE, payload, createMatrix, svgCode, pngBlob, readLogo } from './lib/qr'
+import type { Mode, Level, Shape } from './lib/qr'
 function Help({ title, children }: { title: string; children: string }) {
   return <Popover><PopoverTrigger render={<InputGroupButton size="icon-xs" aria-label={`Petunjuk ${title.toLowerCase()}`} />}><InfoIcon /></PopoverTrigger><PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)]"><PopoverHeader><PopoverTitle>{title}</PopoverTitle><PopoverDescription>{children}</PopoverDescription></PopoverHeader></PopoverContent></Popover>
 }
@@ -24,6 +25,16 @@ export default function QrCode() {
   const [content, setContent] = useState({ ...EMPTY_CONTENT })
   const [appearance, setAppearance] = useState({ ...DEFAULT_APPEARANCE })
   const [showPassword, setShowPassword] = useState(false), [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const uploadVersion = useRef(0)
+  async function uploadLogo(file?: File) {
+    if (!file) return
+    const version = ++uploadVersion.current
+    setUploading(true); setExportError('')
+    try { const logo = await readLogo(file); if (version === uploadVersion.current) setAppearance(previous => ({...previous, logo, level:'H'})) }
+    catch (error) { if (version === uploadVersion.current) setExportError((error as Error).message) }
+    finally { if (version === uploadVersion.current) setUploading(false) }
+  }
   useEffect(() => { document.title = 'Pembuat QR code — XVII Dev' }, [])
   function update<K extends keyof typeof content>(key: K, value: typeof content[K]) { setContent(previous => ({ ...previous, [key]: value })); setExportError('') }
   const input = useMemo(() => { try { return { text: payload(content), error: '' } } catch (error) { return { text: '', error: (error as Error).message } } }, [content])
@@ -34,7 +45,7 @@ export default function QrCode() {
     catch (error) { return { matrix: null, svg: '', error: (error as Error).message } }
   }, [deferred, appearance])
   const pending = deferred !== input.text, error = input.error || result.error
-  const ready = !pending && !error && !!input.text && !!result.matrix
+  const ready = !uploading && !pending && !error && !!input.text && !!result.matrix
   async function save(format: 'png' | 'svg') {
     if (!ready || !result.matrix) return
     setExporting(true); setExportError('')
@@ -60,11 +71,17 @@ export default function QrCode() {
             <TabsContent value="whatsapp" className="pt-4"><FieldGroup className="gap-5"><Field><FieldLabel htmlFor="qr-phone">Nomor WhatsApp</FieldLabel><InputGroup><InputGroupAddon><MessageCircleIcon /></InputGroupAddon><InputGroupInput id="qr-phone" type="tel" inputMode="tel" value={content.phone} onChange={event => update('phone',event.target.value)} placeholder="+6281234567890" aria-describedby="qr-phone-hint" /></InputGroup><FieldDescription id="qr-phone-hint">Sertakan kode negara. Nomor Indonesia berawalan 08 otomatis menjadi 628.</FieldDescription></Field><Field><FieldLabel htmlFor="qr-message">Pesan awal (opsional)</FieldLabel><InputGroup><InputGroupTextarea id="qr-message" className="min-h-24" value={content.message} onChange={event => update('message',event.target.value)} placeholder="Halo, saya ingin bertanya…" /></InputGroup><FieldDescription>Pesan diisi saat percakapan dibuka; pengunjung tetap memilih untuk mengirimnya.</FieldDescription></Field></FieldGroup></TabsContent>
           </Tabs>
         </CardContent></Card>
+        <Card size="sm"><CardHeader><CardTitle role="heading" aria-level={2}>Bentuk &amp; logo</CardTitle><CardDescription>Ubah karakter pola dan tambahkan identitas Anda.</CardDescription></CardHeader><CardContent><FieldGroup className="gap-5">
+          <Field><FieldLabel htmlFor="qr-shape">Bentuk pola</FieldLabel><SelectInput id="qr-shape" className="w-full" value={appearance.shape} onValueChange={value=>setAppearance(previous=>({...previous,shape:value as Shape}))} options={[{value:'square',label:'Kotak klasik'},{value:'rounded',label:'Sudut membulat'},{value:'dots',label:'Titik / lingkaran'}]} /><FieldDescription>Tiga penanda besar di sudut tetap kotak agar mudah dikenali pemindai.</FieldDescription></Field>
+          <Field><FieldLabel htmlFor="qr-logo">Logo atau ikon (opsional)</FieldLabel><Input id="qr-logo" type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={event=>{void uploadLogo(event.target.files?.[0]);event.target.value=''}} /><FieldDescription>PNG, JPG, atau WebP, maksimal 2 MB. Gambar transparan didukung; logo tetap di perangkat Anda.</FieldDescription></Field>
+          {uploading && <p role="status" className="text-sm text-muted-foreground">Menyiapkan logo…</p>}
+          {appearance.logo && <><div className="flex items-center gap-4"><img src={appearance.logo} width={48} height={48} className="size-12 object-contain" alt="Logo yang dipilih" /><Button variant="outline" size="sm" onClick={()=>{uploadVersion.current++;setUploading(false);setAppearance(previous=>({...previous,logo:undefined}));setExportError('')}}>Hapus logo</Button></div><Field><FieldLabel htmlFor="qr-logo-size">Ukuran logo</FieldLabel><SelectInput id="qr-logo-size" className="w-full" value={String(appearance.logoScale)} onValueChange={value=>setAppearance(previous=>({...previous,logoScale:Number(value)}))} options={[{value:'12',label:'Kecil (12%)'},{value:'16',label:'Sedang (16%)'},{value:'18',label:'Besar (18%)'}]} /><FieldDescription>Logo dipusatkan dengan ruang pemisah. Koreksi H otomatis digunakan. Tetap uji pindai sebelum dibagikan.</FieldDescription></Field></>}
+        </FieldGroup></CardContent></Card>
         <Card size="sm"><CardHeader><CardTitle role="heading" aria-level={2}>Tampilan &amp; unduhan</CardTitle><CardDescription>Pola gelap, latar terang, dan ruang kosong membantu kode terbaca.</CardDescription></CardHeader><CardContent><FieldGroup className="grid grid-cols-2 gap-5">
           {([{key:'foreground',label:'Warna pola'},{key:'background',label:'Warna latar'}] as const).map(({key,label}) => <Field key={key}><FieldLabel htmlFor={`qr-${key}`}>{label}</FieldLabel><InputGroup><InputGroupAddon><PaletteIcon /></InputGroupAddon><InputGroupInput id={`qr-${key}`} value={appearance[key]} onChange={event => setAppearance(previous => ({...previous,[key]:event.target.value}))} spellCheck={false} maxLength={7} aria-describedby={`qr-${key}-hint`} /><InputGroupAddon align="inline-end"><Help title={label}>Gunakan kode warna enam digit, misalnya #111111 untuk hitam atau #ffffff untuk putih. Warna pola harus lebih gelap dari latarnya.</Help></InputGroupAddon></InputGroup><FieldDescription id={`qr-${key}-hint`}>Kode warna #RRGGBB.</FieldDescription></Field>)}
           <Field><FieldLabel htmlFor="qr-size">Ukuran PNG</FieldLabel><SelectInput id="qr-size" className="w-full" value={String(appearance.size)} onValueChange={value => setAppearance(previous => ({...previous,size:Number(value)}))} options={[256,512,1024,2048].map(size=>({value:String(size),label:`${size} × ${size} px`}))} /><FieldDescription>SVG tetap tajam saat diperbesar.</FieldDescription></Field>
-          <Field><FieldLabel htmlFor="qr-level">Koreksi kesalahan</FieldLabel><InputGroup><SelectInput id="qr-level" className="min-w-0 flex-1 border-0" value={appearance.level} onValueChange={value => setAppearance(previous=>({...previous,level:value as Level}))} options={[{value:'L',label:'Rendah (L)'},{value:'M',label:'Sedang (M)'},{value:'Q',label:'Tinggi (Q)'},{value:'H',label:'Maksimal (H)'}]} /><InputGroupAddon align="inline-end"><Help title="Koreksi kesalahan">M membantu memulihkan sebagian data jika kode sedikit rusak. Q dan H memberi lebih banyak cadangan, tetapi pola menjadi lebih padat. Ini tidak menggantikan kontras dan cetak yang baik.</Help></InputGroupAddon></InputGroup><FieldDescription>M cukup untuk penggunaan umum.</FieldDescription></Field>
-        </FieldGroup><Button variant="link" size="sm" className="mt-5" onClick={()=>setAppearance({...DEFAULT_APPEARANCE})}>Atur ulang tampilan</Button></CardContent></Card>
+          <Field><FieldLabel htmlFor="qr-level">Koreksi kesalahan</FieldLabel><InputGroup><SelectInput disabled={!!appearance.logo} id="qr-level" className="min-w-0 flex-1 border-0" value={appearance.level} onValueChange={value => setAppearance(previous=>({...previous,level:value as Level}))} options={[{value:'L',label:'Rendah (L)'},{value:'M',label:'Sedang (M)'},{value:'Q',label:'Tinggi (Q)'},{value:'H',label:'Maksimal (H)'}]} /><InputGroupAddon align="inline-end"><Help title="Koreksi kesalahan">M membantu memulihkan sebagian data jika kode sedikit rusak. Q dan H memberi lebih banyak cadangan, tetapi pola menjadi lebih padat. Ini tidak menggantikan kontras dan cetak yang baik.</Help></InputGroupAddon></InputGroup><FieldDescription>{appearance.logo ? 'H aktif otomatis karena menggunakan logo.' : 'M cukup untuk penggunaan umum.'}</FieldDescription></Field>
+        </FieldGroup><Button variant="link" size="sm" className="mt-5" onClick={()=>{uploadVersion.current++;setUploading(false);setAppearance({...DEFAULT_APPEARANCE});setExportError('')}}>Atur ulang tampilan</Button></CardContent></Card>
       </div>
       <section className="min-w-0 lg:sticky lg:top-20" aria-labelledby="qr-preview-title"><Card><CardHeader><CardTitle id="qr-preview-title" role="heading" aria-level={2}><QrCodeIcon className="mr-2 inline size-4" />Pratinjau</CardTitle><CardDescription>QR code statis, tanpa tautan perantara atau pelacakan.</CardDescription></CardHeader><CardContent className="flex flex-col gap-5">
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}

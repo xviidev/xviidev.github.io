@@ -2,9 +2,10 @@ import QRCode from 'qrcode'
 export type Mode = 'text' | 'wifi' | 'whatsapp'
 export type Level = 'L' | 'M' | 'Q' | 'H'
 export interface Content { mode: Mode; text: string; ssid: string; password: string; security: 'WPA' | 'WEP' | 'nopass'; hidden: boolean; phone: string; message: string }
-export interface Appearance { foreground: string; background: string; size: number; level: Level }
-export interface Matrix { size: number; data: Uint8Array }
-export const DEFAULT_APPEARANCE: Appearance = { foreground: '#111111', background: '#ffffff', size: 1024, level: 'M' }
+export type Shape = 'square' | 'rounded' | 'dots'
+export interface Appearance { foreground: string; background: string; size: number; level: Level; shape: Shape; logo?: string; logoScale: number }
+export interface Matrix { size: number; data: Uint8Array; protected?: Uint8Array }
+export const DEFAULT_APPEARANCE: Appearance = { foreground: '#111111', background: '#ffffff', size: 1024, level: 'M', shape: 'square', logoScale: 18 }
 export const EMPTY_CONTENT: Content = { mode: 'text', text: '', ssid: '', password: '', security: 'WPA', hidden: false, phone: '', message: '' }
 const wifiEscape = (text: string) => text.replace(/[\\;,:"]/g, char => `\\${char}`)
 export function payload(content: Content): string {
@@ -32,6 +33,9 @@ export function validateAppearance(options: Appearance) {
   if (![options.foreground, options.background].every(color => /^#[0-9a-f]{6}$/i.test(color))) throw new Error('Isi warna dengan kode enam digit, misalnya #111111.')
   if (![256, 512, 1024, 2048].includes(options.size)) throw new Error('Pilih ukuran PNG yang tersedia.')
   if (!['L', 'M', 'Q', 'H'].includes(options.level)) throw new Error('Pilih tingkat koreksi kesalahan yang tersedia.')
+  if (!['square', 'rounded', 'dots'].includes(options.shape)) throw new Error('Pilih bentuk pola yang tersedia.')
+  if (![12, 16, 18].includes(options.logoScale)) throw new Error('Pilih ukuran logo yang tersedia.')
+  if (options.logo && (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(options.logo) || options.logo.length > 2000000)) throw new Error('Logo tidak valid. Unggah ulang gambar PNG, JPG, atau WebP.')
   const dark = luminance(options.foreground), light = luminance(options.background)
   if (dark >= light || (light + 0.05) / (dark + 0.05) < 4.5) throw new Error('Gunakan pola gelap di atas latar terang dengan kontras lebih tinggi. Coba warna awal.')
 }
@@ -40,18 +44,27 @@ export function createMatrix(text: string, options: Appearance): Matrix {
   if (!text.trim()) throw new Error('Isi konten QR code terlebih dahulu.')
   if (new TextEncoder().encode(text).length > 3000) throw new Error('Konten terlalu panjang. Ringkas teks atau gunakan tautan yang lebih pendek.')
   try {
-    const result = QRCode.create(text, { errorCorrectionLevel: options.level })
-    return { size: result.modules.size, data: new Uint8Array(result.modules.data) }
+    const result = QRCode.create(text, { errorCorrectionLevel: options.logo ? 'H' : options.level })
+    return { size: result.modules.size, data: new Uint8Array(result.modules.data), protected: new Uint8Array(result.modules.reservedBit) }
   } catch { throw new Error('Konten tidak muat pada tingkat koreksi ini. Ringkas isinya atau pilih koreksi yang lebih rendah.') }
+}
+export function finderModule(x: number, y: number, size: number) {
+  return (x < 8 && y < 8) || (x >= size - 8 && y < 8) || (x < 8 && y >= size - 8)
 }
 export function svgCode(matrix: Matrix, options: Appearance) {
   validateAppearance(options)
   const side = matrix.size + 8
-  let path = ''
+  let path = '', shapes = ''
   for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) {
-    if (matrix.data[y * matrix.size + x]) path += `M${x + 4} ${y + 4}h1v1h-1z`
+    if (!matrix.data[y * matrix.size + x]) continue
+    const a = x + 4, b = y + 4
+    if (options.shape === 'square' || matrix.protected?.[y * matrix.size + x] || finderModule(x, y, matrix.size)) path += `M${a} ${b}h1v1h-1z`
+    else if (options.shape === 'dots') shapes += `<circle cx="${a + 0.5}" cy="${b + 0.5}" r="0.5"/>`
+    else shapes += `<rect x="${a}" y="${b}" width="1" height="1" rx="0.28"/>`
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${options.size}" height="${options.size}" viewBox="0 0 ${side} ${side}" shape-rendering="crispEdges"><rect width="${side}" height="${side}" fill="${options.background}"/><path d="${path}" fill="${options.foreground}"/></svg>`
+  const box = matrix.size * options.logoScale / 100, position = (side - box) / 2, inset = box * 0.12
+  const logo = options.logo ? `<rect x="${position}" y="${position}" width="${box}" height="${box}" fill="${options.background}"/><image href="${options.logo}" x="${position + inset}" y="${position + inset}" width="${box - inset * 2}" height="${box - inset * 2}" preserveAspectRatio="xMidYMid meet"/>` : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${options.size}" height="${options.size}" viewBox="0 0 ${side} ${side}"><rect width="${side}" height="${side}" fill="${options.background}"/><path d="${path}" fill="${options.foreground}" shape-rendering="crispEdges"/><g fill="${options.foreground}">${shapes}</g>${logo}</svg>`
 }
 // Integer module pixels preserve sharp edges, with at least four clear modules on every side.
 export function rasterGeometry(matrix: Matrix, size: number) {
@@ -59,15 +72,30 @@ export function rasterGeometry(matrix: Matrix, size: number) {
   if (scale < 1) throw new Error('Ukuran gambar terlalu kecil untuk QR code ini.')
   return { scale, offset: Math.floor((size - matrix.size * scale) / 2) }
 }
-export function pngBlob(matrix: Matrix, options: Appearance): Promise<Blob> {
-  validateAppearance(options)
+export async function pngBlob(matrix: Matrix, options: Appearance): Promise<Blob> {
+  const image = new Image()
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgCode(matrix, options))}`
+  try { await image.decode() } catch { throw new Error('Gambar gagal disiapkan. Unggah ulang logo atau coba unduh SVG.') }
   const canvas = document.createElement('canvas')
   canvas.width = options.size; canvas.height = options.size
   const context = canvas.getContext('2d')
-  if (!context) return Promise.reject(new Error('Browser tidak dapat membuat PNG. Coba unduh SVG.'))
-  context.fillStyle = options.background; context.fillRect(0, 0, options.size, options.size)
-  const { scale, offset } = rasterGeometry(matrix, options.size)
-  context.fillStyle = options.foreground
-  for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) if (matrix.data[y * matrix.size + x]) context.fillRect(offset + x * scale, offset + y * scale, scale, scale)
+  if (!context) throw new Error('Browser tidak dapat membuat PNG. Coba unduh SVG.')
+  context.drawImage(image, 0, 0, options.size, options.size)
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG gagal dibuat. Coba unduh SVG.')), 'image/png'))
+}
+export async function readLogo(file: File): Promise<string> {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Gunakan logo PNG, JPG, atau WebP.')
+  if (file.size > 2 * 1024 * 1024) throw new Error('Ukuran logo maksimal 2 MB.')
+  let bitmap: ImageBitmap
+  try { bitmap = await createImageBitmap(file) } catch { throw new Error('Gambar tidak dapat dibaca. Coba berkas lain.') }
+  try {
+    if (bitmap.width > 8192 || bitmap.height > 8192) throw new Error('Dimensi logo maksimal 8.192 piksel per sisi.')
+    const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Browser tidak dapat menyiapkan logo.')
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/png')
+  } finally { bitmap.close() }
 }
