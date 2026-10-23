@@ -8,7 +8,7 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test src/lib/labels.test.ts src/lib/rich-text.test.ts src/lib/print-layout.test.ts src/lib/presets.test.ts src/lib/editor-format.test.ts src/lib/label-barcode.test.ts"
+    "test": "node --test src/lib/labels.test.ts src/lib/rich-text.test.ts src/lib/print-layout.test.ts src/lib/presets.test.ts src/lib/editor-format.test.ts src/lib/label-barcode.test.ts src/lib/barcode-template.test.ts"
   },
   "dependencies": {
     "@xviidev/barcode": "*",

@@ -62,7 +62,7 @@ export function getFont(key: FontKey): Promise<LoadedFont> {
 }
 export async function loadFonts(documents: RichDocument[], settings: LabelSettings): Promise<Map<FontKey, LoadedFont>> {
   const keys = new Set(documents.flatMap(doc => doc.flatMap(line => line.runs.map(run => fontKey(run, settings)))))
-  if (settings.barcode?.enabled && settings.barcode.showText) keys.add('mono:400:normal')
+  if ((settings.barcode?.enabled && settings.barcode.showText) || documents.some(doc => doc.some(line => line.barcode && line.barcode.options.showText !== false))) keys.add('mono:400:normal')
   return new Map(await Promise.all([...keys].map(async key => [key, await getFont(key)] as const)))
 }
 export function makeMeasure(fonts: Map<FontKey, LoadedFont>): Measure {

@@ -51,14 +51,16 @@ test('placed barcode patterns decode independently at physical label dimensions'
     const value = format === 'CODE128' ? 'BRG-0001' : '590123412345'
     const placed = placeBarcode(value, { ...barcode, format }, DEFAULT_SETTINGS, measure)
     // Sample the same vector rectangles used by both canvas and PDF at 300 DPI.
-    const scale = 300 / 72, bits = new BitArray(Math.ceil(placed.width * scale))
+    // Include the unprinted surrounding paper in the scanner's view; the symbol
+    // itself has no internal padding, as asserted below.
+    const scale = 300 / 72, paper = 100, bits = new BitArray(Math.ceil(placed.width * scale) + 2 * paper)
     for (let pixel = 0; pixel < bits.getSize(); pixel++) {
-      const x = placed.x + (pixel + 0.5) / scale
+      const x = placed.x + (pixel - paper + 0.5) / scale
       if (placed.bars.some(bar => x >= bar.x && x < bar.x + bar.width)) bits.set(pixel)
     }
     assert.equal((format === 'CODE128' ? new Code128Reader() : new EAN13Reader()).decodeRow(0, bits).getText(), placed.value)
     assert.equal(placed.value, format === 'CODE128' ? value : value + '7')
-    assert(placed.bars[0].x > placed.x)
+    assert.equal(placed.bars[0].x, placed.x)
     assert(placed.text!.baseline < placed.y + placed.height)
   }
 })

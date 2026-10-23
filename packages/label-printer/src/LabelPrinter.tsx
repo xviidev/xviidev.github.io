@@ -4,7 +4,7 @@ import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText, InputGrou
 import { applyPaperPreset, paperSettings } from './lib/presets'
 import { Separator } from '@xviidev/ui/components/separator'
 import { DocumentPresets } from './components/DocumentPresets'
-import { BarcodeDesign } from './components/BarcodeDesign'
+import { barcodeExpression } from './lib/barcode-template'
 import { prepareLabelData } from './lib/label-data'
 import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon, FileTextIcon, CopyIcon, HashIcon, Rows3Icon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@xviidev/ui/components/empty'
@@ -75,12 +75,13 @@ export default function LabelPrinter() {
   const showTemplate = mode === 'excel' || applyTemplate
   const templateIssues = useMemo(() => showTemplate && (mode !== 'excel' || sheets.length) ? templateErrors(templateDoc, columnCount) : [], [showTemplate, mode, sheets.length, templateDoc, columnCount])
   const sourceLabels = useMemo(() => {
+    if (templateIssues.length) return []
     if (mode === 'manual') return rawManual.map((doc, index) => {
       const values = doc.map(line => documentText([line]))
       return { document: applyTemplate ? resolveTemplate(templateDoc, values) : manualDocuments(doc)[0] ?? [], values, source: `Label manual ${index + 1}` }
     })
-    return rows.slice(header ? 1 : 0).map((row, index) => ({ document: resolveTemplate(templateDoc, row), values: row, source: `Baris Excel ${index + (header ? 2 : 1)}` }))
-  }, [mode, applyTemplate, rawManual, manualDoc, templateDoc, rows, header])
+    return rows.slice(header ? 1 : 0).flatMap((row, index) => row.some(value => formatCell(value)) ? [{ document: resolveTemplate(templateDoc, row), values: row, source: `Baris Excel ${index + (header ? 2 : 1)}` }] : [])
+  }, [mode, applyTemplate, rawManual, manualDoc, templateDoc, rows, header, templateIssues])
   const labelResult = useMemo(() => {
     try { return { ...prepareLabelData(sourceLabels, copies, settings.barcode), error: '' } }
     catch (error) { return { labels: [] as RichDocument[], barcodeValues: [] as string[], errors: [] as string[], count: 0, error: error instanceof Error ? error.message : 'Data tidak valid.' } }
@@ -170,6 +171,12 @@ export default function LabelPrinter() {
     try {
       if (file.size > 1024 * 1024) throw new Error('Ukuran berkas template maksimal 1 MB.')
       const decoded = decodeTemplate(await file.text())
+      if (decoded.settings.barcode?.enabled) {
+        const old = decoded.settings.barcode
+        const expression = barcodeExpression({ source: old.source === 'fixed' ? old.value : old.column + 1, options: { format: old.format, width: old.width, height: old.height, showText: old.showText } })
+        decoded.document = [...decoded.document, { runs: [{ text: expression }] }]
+      }
+      delete decoded.settings.barcode
       setTemplate(decoded.document); setSettings(previous => ({ ...decoded.settings, ...paperSettings(previous) })); setApplyTemplate(true)
       setTemplateMessage('Template dimuat. Data penerima tetap menggunakan input saat ini.')
     } catch { setTemplateMessage('Desain tidak valid. Gunakan berkas JSON dari tombol Unduh desain JSON.') }
@@ -249,7 +256,8 @@ export default function LabelPrinter() {
           <p className="hint mb-4">Atur tebal, miring, ukuran huruf, dan perataan langsung di editor. Pengaturan di bawah berlaku untuk seluruh label dan tidak ikut disimpan dalam preset kertas.</p>
           {showTemplate && <><FieldGroup className="gap-4">
           <p className="hint mb-3">Penanda {'{{1}}'} mengambil kolom pertama Excel atau baris pertama input manual; {'{{2}}'} mengambil yang kedua. Pilih penandanya untuk mengatur huruf. Contoh: baris {'{{1}}'} tebal, baris {'{{2}}'} normal. Nilai - atau kosong diabaikan tanpa menyisakan ruang. Jika semua kolom pada satu baris kosong, awalan teks baris itu juga dihapus.</p>
-          <RichTextEditor key={`template-${templateRevision}`} ref={templateRef} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Template label" initialDocument={templateDoc} onChange={setTemplateDoc} />
+          <RichTextEditor key={`template-${templateRevision}`} ref={templateRef} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Template label" settings={settings} rows={sourceLabels.map(source => source.values)} initialDocument={templateDoc} onChange={setTemplateDoc} />
+          <p className="hint">Pilih penanda seperti {'{{3}}'} lalu tekan ikon barcode untuk mengubahnya menjadi {'{{barcode(3)}}'}. Panah di samping ikon membuka pengaturan tampilan opsional. Barcode mengikuti posisi, perataan, dan warna teks. Enter serta spasi template dipertahankan.</p>
           <p className="mt-4 mb-2 text-sm">Sisipkan kolom di posisi kursor</p><div className="flex max-h-40 flex-wrap gap-2 overflow-auto">{Array.from({ length: Math.min(columnCount, 100) }, (_, column) => <Button key={column} variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => templateRef.current?.insertText(`{{${column + 1}}}`)}>{`{{${column + 1}}}`} {mode === 'excel' && header ? formatCell(rows[0]?.[column]) : `Baris ${column + 1}`}</Button>)}</div>
           <div className="mt-4 flex flex-wrap gap-4 text-sm"><Button variant="link" size="sm" className="" onClick={() => setTemplate(makeTemplate(Math.min(columnCount, 3)))}>Template awal</Button><Button variant="link" size="sm" className="" onClick={saveTemplate}>Unduh desain JSON</Button><Button variant="link" size="sm" onClick={()=>templateFileRef.current?.click()}>Impor desain JSON</Button><Input ref={templateFileRef} className="hidden" type="file" aria-label="Muat template JSON" accept=".json,application/json" onChange={event => { void openTemplate(event.target.files?.[0]);event.target.value='' }} /></div>
           <p className="hint" role="status">{templateMessage}</p>
@@ -266,15 +274,13 @@ export default function LabelPrinter() {
             <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>
           </FieldGroup>
-          <Separator className="my-5" />
-          <BarcodeDesign settings={settings} mode={mode} columns={Array.from({ length: Math.min(columnCount, 100) }, (_, column) => ({ value: String(column), label: `${column + 1}. ${mode === 'excel' && header ? formatCell(rows[0]?.[column]) || `Kolom ${column + 1}` : `Baris ${column + 1}`}` }))} onChange={value => update('barcode', value)} />
         </CardContent></Card>
       </div>
       <section className="min-w-0 xl:sticky xl:top-20" aria-labelledby="preview-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="preview-title">Pratinjau</h2><div className="flex flex-wrap gap-2"><Button  disabled={!canExport} onClick={() => { void exportPdf(false) }}><DownloadIcon />{exporting ? 'Menyiapkan…' : 'Unduh PDF'}</Button><Button variant="outline" size="sm" disabled={!canExport} onClick={() => { void exportPdf(true) }}><PrinterIcon />Cetak PDF</Button></div></div>
         <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">{labelResult.labels.length} label · {pages.length} lembar · {layout.columns} kolom × {layout.rows} baris</p>
         {errors.length > 0 && <Alert variant="destructive" className="mb-4"><AlertDescription><ul className="list-disc pl-4">{errors.map(error => <li key={error}>{error}</li>)}</ul></AlertDescription></Alert>}
-        {!!model?.overflow.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Teks pada label {model.overflow.slice(0, 8).map(i => i + 1).join(', ')}{model.overflow.length > 8 ? ', …' : ''} tidak muat. Kecilkan huruf, atur posisi, atau perbesar label.</AlertDescription></Alert>}
+        {!!model?.overflow.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Isi pada label {model.overflow.slice(0, 8).map(i => i + 1).join(', ')}{model.overflow.length > 8 ? ', …' : ''} tidak muat. Kecilkan huruf atau tinggi barcode, atur posisi, atau perbesar label.</AlertDescription></Alert>}
         {!!model?.unsupported.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Ada karakter yang tidak didukung font. Ganti karakter khusus atau emoji pada label {model.unsupported.slice(0, 8).map(i => i + 1).join(', ')} sebelum mengekspor.</AlertDescription></Alert>}
         {printMessage && <p className="hint mb-4" role="status">{printMessage}</p>}
         <div className="mb-3 flex flex-wrap items-center gap-4"><Button variant="outline" size="sm" aria-pressed={dragMode} onClick={() => setDragMode(previous => !previous)}>Geser blok teks</Button><span className="text-sm text-muted-foreground">{dragMode ? 'Geser teks di canvas. Berlaku untuk semua label.' : 'Format teks tetap mengikuti editor dan template.'}</span></div>

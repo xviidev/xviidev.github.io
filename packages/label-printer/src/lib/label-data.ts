@@ -8,6 +8,14 @@ export function prepareLabelData(sources: LabelSource[], copies: number, barcode
   const enabled = barcode?.enabled
   const kept = sources.filter(item => item.document.length || (enabled && item.values.some(value => formatCell(value))))
   const errors: string[] = []
+  const documents = kept.map(item => item.document.map(line => {
+    if (!line.barcode) return line
+    try {
+      const code = encode(line.barcode.value, line.barcode.options.format ?? 'CODE128')
+      const barcode = { ...line.barcode, value: code.value }
+      return { ...line, barcode, runs: line.runs.map(run => run.barcode ? { ...run, barcode } : run) }
+    } catch (error) { errors.push(`${item.source}: ${(error as Error).message}`); return line }
+  }))
   const values = kept.map(item => {
     if (!enabled) return ''
     const raw = barcode.source === 'fixed' ? barcode.value : item.values[barcode.column]
@@ -15,5 +23,5 @@ export function prepareLabelData(sources: LabelSource[], copies: number, barcode
     catch (error) { errors.push(`${item.source}: ${(error as Error).message}`); return '' }
   })
   const indices = expandLabels(kept.map((_, index) => String(index)), copies).map(Number)
-  return { labels: indices.map(index => kept[index].document), barcodeValues: indices.map(index => values[index]), errors, count: kept.length }
+  return { labels: indices.map(index => documents[index]), barcodeValues: indices.map(index => values[index]), errors, count: kept.length }
 }

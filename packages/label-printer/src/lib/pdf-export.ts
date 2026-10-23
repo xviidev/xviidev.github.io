@@ -24,12 +24,16 @@ export async function generatePdf(model: PrintModel, s: LabelSettings, loadBytes
       const barcode = slot.label.barcode
       if (barcode) {
         page.drawRectangle({ x: slot.x + barcode.x, y: height - slot.y - barcode.y - barcode.height, width: barcode.width, height: barcode.height, color: rgb(1, 1, 1) })
-        for (const bar of barcode.bars) page.drawRectangle({ x: slot.x + bar.x, y: height - slot.y - barcode.barY - barcode.barHeight, width: bar.width, height: barcode.barHeight, color: rgb(0, 0, 0) })
+        const hex = barcode.color
+        const color = rgb(parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255)
+        for (const bar of barcode.bars) page.drawRectangle({ x: slot.x + bar.x, y: height - slot.y - barcode.barY - barcode.barHeight, width: bar.width, height: barcode.barHeight, color })
       }
       for (const run of slot.label.runs) {
         const x = slot.x + run.x, y = height - slot.y - run.baseline
-        page.drawText(run.text, { x, y, size: run.size, font: fonts.get(run.key)!, color: rgb(0, 0, 0) })
-        if (run.underline) page.drawLine({ start: { x, y: y - run.size * 0.12 }, end: { x: x + run.width, y: y - run.size * 0.12 }, thickness: Math.max(0.4, run.size / 18), color: rgb(0, 0, 0) })
+        const hex = run.color ?? '#111111'
+        const color = rgb(parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255)
+        page.drawText(run.text, { x, y, size: run.size, font: fonts.get(run.key)!, color })
+        if (run.underline) page.drawLine({ start: { x, y: y - run.size * 0.12 }, end: { x: x + run.width, y: y - run.size * 0.12 }, thickness: Math.max(0.4, run.size / 18), color })
       }
     }
   }

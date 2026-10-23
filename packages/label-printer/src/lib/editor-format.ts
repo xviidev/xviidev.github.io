@@ -26,3 +26,13 @@ export function $applyFontSize(size: number, saved: RangeSelection | null) {
   $patchStyleText(range, style)
   return range.clone()
 }
+
+export function $applyTextColor(color: string, saved: RangeSelection | null) {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return null
+  let selection = saved && $getNodeByKey(saved.anchor.key) && $getNodeByKey(saved.focus.key) ? saved.clone() : $getSelection()
+  if (!$isRangeSelection(selection)) selection = $getRoot().selectStart()
+  if (!$isRangeSelection(selection)) return null
+  $setSelection(selection)
+  $patchStyleText(selection, { color: color.toLowerCase() })
+  return selection.clone()
+}

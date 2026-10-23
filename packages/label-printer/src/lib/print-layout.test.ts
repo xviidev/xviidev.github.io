@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
 import fontkit from '@pdf-lib/fontkit'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, PDFArray, PDFRawStream, decodePDFRawStream } from 'pdf-lib'
 import { DEFAULT_SETTINGS, paginateLabels } from './labels.ts'
 import { fromText, documentText, resolveTemplate, makeTemplate } from './rich-text.ts'
 import { PT_PER_MM, layoutLabel, layoutPages } from './print-layout.ts'
@@ -70,4 +70,26 @@ test('vector PDF embeds custom fonts and preserves physical multi-page geometry'
   assert.ok(Math.abs(pdf.getPage(0).getHeight() - 297 * PT_PER_MM) < 0.01)
   assert.equal(model.pages[1].length, 1)
   await assert.rejects(generatePdf({ ...model, overflow: [0] }, DEFAULT_SETTINGS, async key => (await load(key)).bytes))
+})
+
+test('PDF preserves text and underline colors and the barcode token color', async () => {
+  const cache = new Map<FontKey, { bytes: Uint8Array; font: ReturnType<typeof fontkit.create> }>()
+  for (const key of ['sans:400:normal', 'mono:400:normal'] as FontKey[]) {
+    const name = key.startsWith('sans') ? 'noto-sans' : 'jetbrains-mono'
+    const bytes = new Uint8Array(await readFile(createRequire(import.meta.url).resolve(`@fontsource/${name}/files/${name}-latin-400-normal.woff`)))
+    cache.set(key, { bytes, font: fontkit.create(bytes) })
+  }
+  const realMeasure: Measure = (text, size, key) => {
+    const font = cache.get(key)!.font
+    return { width: font.layout(text).glyphs.reduce((sum, glyph) => sum + glyph.advanceWidth, 0) / font.unitsPerEm * size, ascent: font.ascent / font.unitsPerEm * size, descent: -font.descent / font.unitsPerEm * size, supported: true }
+  }
+  const doc = resolveTemplate([{ runs: [{ text: '{{1}}', color: '#ff0000', underline: true }] }, { runs: [{ text: '{{barcode(2)}}', color: '#0000ff' }] }], ['Produk', 'BRG-0001'])
+  const model = layoutPages([doc], paginateLabels([documentText(doc)], 24, 1), DEFAULT_SETTINGS, 3, realMeasure)
+  assert.deepEqual(model.barcodeErrors, [])
+  const pdf = await PDFDocument.load(await generatePdf(model, DEFAULT_SETTINGS, async key => cache.get(key)!.bytes))
+  const contents = pdf.getPage(0).node.Contents() as PDFArray
+  const commands = new TextDecoder().decode(decodePDFRawStream(pdf.context.lookup(contents.get(0)) as PDFRawStream).decode())
+  assert(commands.includes('1 0 0 rg'))
+  assert(commands.includes('1 0 0 RG'))
+  assert(commands.includes('0 0 1 rg'))
 })

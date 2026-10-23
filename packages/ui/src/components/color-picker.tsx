@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitl
 import { ToggleGroup, ToggleGroupItem } from './toggle-group'
 import { FieldError } from './field'
 import { normalizeHexColor } from '../lib/color'
+import { Button } from './button'
 
 const DEFAULT_PRESETS = [
   { value: '#111111', label: 'Hitam' }, { value: '#64748b', label: 'Abu-abu' },
@@ -25,6 +26,8 @@ export interface ColorPickerProps {
   label?: string
   disabled?: boolean
   className?: string
+  /** Compact toolbar swatch with no text entry or visible color codes. */
+  compact?: boolean
   'aria-describedby'?: string
   presets?: readonly { value: string; label: string }[]
   /** Optional trailing input actions, for example a help popover. */
@@ -34,7 +37,7 @@ export interface ColorPickerProps {
 /** Shared opaque color input. Only valid six-digit HEX values reach consumers. */
 export function ColorPicker({
   id, value, defaultValue = '#111111', onValueChange, label = 'Warna',
-  disabled = false, className, presets = DEFAULT_PRESETS, children,
+  disabled = false, className, compact = false, presets = DEFAULT_PRESETS, children,
   'aria-describedby': describedBy,
 }: ColorPickerProps) {
   const generatedId = useId()
@@ -61,7 +64,7 @@ export function ColorPicker({
   }
 
   return <Popover open={open && !disabled} onOpenChange={setOpen}>
-    <div data-slot="color-picker" className={cn('flex min-w-0 flex-col gap-2', className)}>
+    {compact ? <PopoverTrigger id={id} disabled={disabled} render={<Button variant="ghost" size="icon-compact" className={className} aria-label={`Pilih ${label.toLowerCase()}`} aria-describedby={describedBy} title={label} />}><span aria-hidden="true" className="size-4 border border-foreground/20" style={{ backgroundColor: current }} /></PopoverTrigger> : <div data-slot="color-picker" className={cn('flex min-w-0 flex-col gap-2', className)}>
       <InputGroup data-disabled={disabled || undefined}>
         <InputGroupAddon>
           <PopoverTrigger disabled={disabled} render={<InputGroupButton size="icon-sm" aria-label={`Pilih ${label.toLowerCase()}`} />}>
@@ -85,14 +88,14 @@ export function ColorPicker({
         {children && <InputGroupAddon align="inline-end">{children}</InputGroupAddon>}
       </InputGroup>
       {invalid && <FieldError id={errorId}>Gunakan kode HEX, misalnya #1e3a8a atau #fff.</FieldError>}
-    </div>
+    </div>}
     <PopoverContent align="start" className="max-h-[min(var(--available-height),calc(100dvh-2rem))] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto" data-slot="color-picker-panel">
-      <PopoverHeader><PopoverTitle>{label}</PopoverTitle><PopoverDescription>Geser untuk memilih warna, atau isi kode HEX.</PopoverDescription></PopoverHeader>
+      <PopoverHeader><PopoverTitle>{label}</PopoverTitle><PopoverDescription>{compact ? 'Pilih warna di bidang atau gunakan warna pilihan.' : 'Geser untuk memilih warna, atau isi kode HEX.'}</PopoverDescription></PopoverHeader>
       <HexColorPicker color={current} onChange={update} aria-label={`Pemilih ${label.toLowerCase()}`} />
       {presets.length > 0 && <ToggleGroup aria-label="Warna pilihan" variant="soft" size="icon-sm"
         className="grid w-full grid-cols-4" value={[current]} onValueChange={values => { if (values[0]) update(values[0]) }}>
         {presets.filter(preset => normalizeHexColor(preset.value)).map(preset => <ToggleGroupItem
-          key={preset.value} value={normalizeHexColor(preset.value)!} aria-label={`${preset.label}, ${preset.value}`} className="w-full">
+          key={preset.value} value={normalizeHexColor(preset.value)!} aria-label={compact ? preset.label : `${preset.label}, ${preset.value}`} className="w-full">
           <span aria-hidden="true" className="size-5 border border-foreground/20" style={{ backgroundColor: normalizeHexColor(preset.value) }} />
         </ToggleGroupItem>)}
       </ToggleGroup>}
