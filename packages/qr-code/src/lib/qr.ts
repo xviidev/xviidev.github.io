@@ -83,6 +83,15 @@ export function svgCode(matrix: Matrix, options: Appearance) {
     else if (options.shape === 'dots' && !matrix.protected?.[y * matrix.size + x]) shapes += `<circle cx="${a + 0.5}" cy="${b + 0.5}" r="0.41"/>`
     else path += roundedModule(x, y)
   }
+  // Smooth re-entrant corners too, where three dark modules surround a white corner.
+  if (options.shape === 'rounded') for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) {
+    if (dark(x, y) || finderModule(x, y, matrix.size) || alignmentCells.has(y * matrix.size + x)) continue
+    const a = x + 4, b = y + 4, r = 0.3
+    if (dark(x - 1, y) && dark(x, y - 1) && dark(x - 1, y - 1)) path += `M${a} ${b}h${r}Q${a} ${b} ${a} ${b + r}Z`
+    if (dark(x + 1, y) && dark(x, y - 1) && dark(x + 1, y - 1)) path += `M${a + 1} ${b}v${r}Q${a + 1} ${b} ${a + 1 - r} ${b}Z`
+    if (dark(x + 1, y) && dark(x, y + 1) && dark(x + 1, y + 1)) path += `M${a + 1} ${b + 1}h${-r}Q${a + 1} ${b + 1} ${a + 1} ${b + 1 - r}Z`
+    if (dark(x - 1, y) && dark(x, y + 1) && dark(x - 1, y + 1)) path += `M${a} ${b + 1}v${-r}Q${a} ${b + 1} ${a + r} ${b + 1}Z`
+  }
   // Keep the 1:1:3:1:1 finder proportions while styling their outlines as complete shapes.
   if (options.shape !== 'square') for (const [x, y] of [[4, 4], [matrix.size - 3, 4], [4, matrix.size - 3]]) {
     if (options.shape === 'dots') shapes += `<circle cx="${x + 3.5}" cy="${y + 3.5}" r="3.5"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="2.5" fill="${options.background}"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="1.5"/>`

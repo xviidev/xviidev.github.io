@@ -11,6 +11,7 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
+        soft: "bg-transparent data-pressed:bg-accent data-pressed:text-accent-foreground data-pressed:hover:bg-accent data-pressed:hover:text-accent-foreground ring-1 ring-inset ring-transparent data-pressed:ring-ring",
       },
       size: {
         "icon-sm": "size-8 min-w-8 p-0",

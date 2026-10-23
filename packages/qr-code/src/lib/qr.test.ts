@@ -70,3 +70,15 @@ test('logo data rejects SVG and external links; enabled logos force H correction
   const logo='data:image/png;base64,iVBORw0KGgo='
   assert.deepEqual(createMatrix('https://xvii.dev/',{...DEFAULT_APPEARANCE,logo}),createMatrix('https://xvii.dev/',{...DEFAULT_APPEARANCE,level:'H'}))
 })
+
+test('rounded junctions soften both outer and re-entrant corners without filling white module centers',()=>{
+  const size=21,data=new Uint8Array(size*size)
+  for(const [x,y] of [[9,9],[10,9],[9,10]])data[y*size+x]=1
+  const options={...DEFAULT_APPEARANCE,shape:'rounded' as const}
+  const rendered=new Resvg(svgCode({size,data},options),{font:{loadSystemFonts:false}}).render()
+  const sample=(x:number,y:number)=>rendered.pixels[(Math.floor(y/29*rendered.height)*rendered.width+Math.floor(x/29*rendered.width))*4]
+  assert(sample(13.03,13.03)>240,'outside corner should be rounded away')
+  assert(sample(14.03,14.03)<40,'inside corner should have a curved dark fill')
+  assert(sample(14.5,14.5)>240,'white module center must remain white')
+  assert(sample(13.5,13.5)<40,'dark module center must remain dark')
+})
