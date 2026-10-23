@@ -3,8 +3,9 @@ import { InputGroupButton } from '@xviidev/ui/components/input-group'
 import { Popover, PopoverTrigger, PopoverContent, PopoverHeader, PopoverTitle, PopoverDescription } from '@xviidev/ui/components/popover'
 import { InfoIcon, MoveHorizontalIcon, MoveVerticalIcon, PanelTopIcon, PanelBottomIcon, PanelLeftIcon, PanelRightIcon, RectangleHorizontalIcon } from '@xviidev/ui/lib/icons'
 
-export type MeasurementKind = 'paperWidth' | 'paperHeight' | 'labelWidth' | 'labelHeight' | 'gapX' | 'gapY' | 'marginTop' | 'marginBottom' | 'marginLeft' | 'marginRight' | 'padding'
+export type MeasurementKind = 'vertical' | 'lineHeight' | 'offsetX' | 'offsetY' | 'paperWidth' | 'paperHeight' | 'labelWidth' | 'labelHeight' | 'gapX' | 'gapY' | 'marginTop' | 'marginBottom' | 'marginLeft' | 'marginRight' | 'padding'
 export const measurementIcons = {
+  vertical: MoveVerticalIcon, lineHeight: MoveVerticalIcon, offsetX: MoveHorizontalIcon, offsetY: MoveVerticalIcon,
   paperWidth: MoveHorizontalIcon, paperHeight: MoveVerticalIcon,
   labelWidth: MoveHorizontalIcon, labelHeight: MoveVerticalIcon,
   gapX: MoveHorizontalIcon, gapY: MoveVerticalIcon,
@@ -12,6 +13,10 @@ export const measurementIcons = {
   marginLeft: PanelLeftIcon, marginRight: PanelRightIcon, padding: RectangleHorizontalIcon,
 } satisfies Record<MeasurementKind, typeof InfoIcon>
 const descriptions: Record<MeasurementKind, string> = {
+  vertical: 'Menempatkan seluruh blok teks di atas, tengah, atau bawah area label. Ruang dalam tetap dihormati. Ini berbeda dari rata kiri, tengah, atau kanan yang diatur di toolbar.',
+  lineHeight: 'Pengali tinggi baris terhadap ukuran huruf. Contoh: huruf 10 pt dengan jarak baris 1,3 memakai tinggi baris minimal 13 pt. Angka lebih besar membuat baris lebih renggang; ini bukan satuan milimeter.',
+  offsetX: 'Menggeser seluruh blok teks secara mendatar pada semua label. Angka positif menggeser ke kanan, negatif ke kiri. 0 mm berarti tanpa pergeseran. Ukuran dan jarak stiker tidak berubah.',
+  offsetY: 'Menggeser seluruh blok teks secara vertikal pada semua label. Angka positif menggeser ke bawah, negatif ke atas. 0 mm berarti tanpa pergeseran. Gunakan sedikit demi sedikit untuk menyesuaikan hasil cetak.',
   paperWidth: 'Ukuran seluruh lembar kertas dari tepi kiri ke tepi kanan, termasuk margin. Bukan lebar satu stiker. A4 tegak memiliki lebar 210 mm.',
   paperHeight: 'Ukuran seluruh lembar kertas dari tepi atas ke tepi bawah, termasuk margin. A4 tegak memiliki tinggi 297 mm. Gunakan Putar kertas untuk menukar lebar dan tinggi.',
   labelWidth: 'Lebar satu stiker dari tepi kiri ke tepi kanan. Jangan sertakan sela antarstiker atau margin kertas.',
@@ -24,14 +29,34 @@ const descriptions: Record<MeasurementKind, string> = {
   marginRight: 'Ruang minimum dari tepi kanan kolom label terakhir ke tepi kanan kertas. Ruang tersisa bisa lebih besar jika satu kolom lagi tidak muat.',
   padding: 'Jarak aman di dalam label, dari tepi stiker ke area teks. Berlaku pada keempat sisi.',
 }
-function MeasurementDiagram({ kind, value, label }: { kind: MeasurementKind; value: number; label: string }) {
+function MeasurementDiagram({ kind, value, label }: { kind: MeasurementKind; value: number | string; label: string }) {
   const arrow = `measure-${useId().replace(/[^a-zA-Z0-9-]/g, '')}`
-  const number = Number.isFinite(value) ? value.toLocaleString('id-ID', { maximumFractionDigits: 2 }) : '—'
+  const number = typeof value === 'number' ? (Number.isFinite(value) ? value.toLocaleString('id-ID', { maximumFractionDigits: 2 }) : '—') : ({ top: 'Atas', center: 'Tengah', bottom: 'Bawah' }[value] ?? value)
+  const unit = kind === 'lineHeight' ? '×' : kind === 'vertical' ? '' : 'mm'
   const arrowProps = { stroke: 'currentColor', strokeWidth: 2, markerStart: `url(#${arrow})`, markerEnd: `url(#${arrow})` }
   const cell = (x: number, y: number, width: number, height: number, text?: string) => <g><rect x={x} y={y} width={width} height={height} className="fill-muted stroke-muted-foreground" strokeWidth={1.5} />{text && <text x={x + width / 2} y={y + height / 2 + 4} textAnchor="middle" fill="currentColor" fontSize={13}>{text}</text>}</g>
-  return <svg viewBox="0 0 300 205" className="block h-auto w-full" role="img" aria-label={`Ilustrasi ${label.toLocaleLowerCase('id-ID')}, ${number} milimeter`}>
+  return <svg viewBox="0 0 300 205" className="block h-auto w-full" role="img" aria-label={`Ilustrasi ${label.toLocaleLowerCase('id-ID')}, ${number} ${unit}`}>
     <defs><marker id={arrow} viewBox="0 0 6 6" refX={3} refY={3} markerWidth={5} markerHeight={5} orient="auto-start-reverse"><path d="M0 0L6 3L0 6Z" fill="currentColor" /></marker></defs>
-    {kind === 'paperWidth' || kind === 'paperHeight' || kind === 'labelWidth' || kind === 'labelHeight' ? <>
+    {kind === 'vertical' ? <>
+      {(['top', 'center', 'bottom'] as const).map((position, index) => <g key={position}>
+        <rect x={12 + index * 96} y={24} width={84} height={128} className="fill-background stroke-muted-foreground" strokeWidth={value === position ? 3 : 1} />
+        <rect x={23 + index * 96} y={35} width={62} height={106} fill="none" className="stroke-muted-foreground" strokeDasharray="4 3" />
+        {[0, 1, 2].map(line => <line key={line} x1={31 + index * 96} x2={77 + index * 96} y1={(position === 'top' ? 46 : position === 'center' ? 76 : 106) + line * 12} y2={(position === 'top' ? 46 : position === 'center' ? 76 : 106) + line * 12} stroke="currentColor" strokeWidth={2} />)}
+        <text x={54 + index * 96} y={180} textAnchor="middle" fill="currentColor" fontSize={13}>{['Atas', 'Tengah', 'Bawah'][index]}</text>
+      </g>)}
+    </> : kind === 'lineHeight' ? <>
+      {cell(30, 20, 240, 152)}
+      {[48, 92, 136].map((y, index) => <g key={y}><text x={53} y={y} fill="currentColor" fontSize={17}>Baris {index + 1}</text><line x1={48} x2={210} y1={y + 3} y2={y + 3} className="stroke-muted-foreground" strokeDasharray="4 3" /></g>)}
+      <line x1={238} x2={238} y1={55} y2={89} {...arrowProps} />
+      <text x={150} y={199} textAnchor="middle" fill="currentColor" fontSize={14}>Jarak baris: {number} × ukuran huruf</text>
+    </> : kind === 'offsetX' || kind === 'offsetY' ? <>
+      {cell(24, 20, 252, 148)}
+      <rect x={48} y={40} width={204} height={108} fill="none" className="stroke-muted-foreground" strokeDasharray="4 3" />
+      <text x={68} y={83} className="fill-muted-foreground" fontSize={16}>Teks awal</text>
+      {Number(value) !== 0 && <><text x={kind === 'offsetX' ? Number(value) < 0 ? 48 : 114 : 68} y={kind === 'offsetY' ? Number(value) < 0 ? 58 : 128 : 112} fill="currentColor" fontSize={16}>Teks bergeser</text>
+        <line x1={kind === 'offsetX' ? Number(value) < 0 ? 91 : 76 : 228} x2={kind === 'offsetX' ? Number(value) < 0 ? 60 : 108 : 228} y1={kind === 'offsetY' ? Number(value) < 0 ? 95 : 83 : 132} y2={kind === 'offsetY' ? Number(value) < 0 ? 63 : 115 : 132} {...arrowProps} /></>}
+      <text x={150} y={199} textAnchor="middle" fill="currentColor" fontSize={14}>{label}: {number} mm{Number(value) === 0 ? ' (tanpa geser)' : ''}</text>
+    </> : kind === 'paperWidth' || kind === 'paperHeight' || kind === 'labelWidth' || kind === 'labelHeight' ? <>
       <rect x={55} y={18} width={170} height={144} className="fill-background stroke-muted-foreground" strokeWidth={1.5} />
       {cell(77, 40, 58, 40)}{cell(148, 40, 58, 40)}{cell(77, 94, 58, 40)}{cell(148, 94, 58, 40)}
       {kind === 'paperWidth' && <><path d="M55 165V183M225 165V183" className="stroke-muted-foreground" /><line x1={60} x2={220} y1={176} y2={176} {...arrowProps} /></>}
@@ -62,12 +87,12 @@ function MeasurementDiagram({ kind, value, label }: { kind: MeasurementKind; val
     </>}
   </svg>
 }
-export function MeasurementHelp({ kind, label, value }: { kind: MeasurementKind; label: string; value: number }) {
+export function MeasurementHelp({ kind, label, value }: { kind: MeasurementKind; label: string; value: number | string }) {
   return <Popover><PopoverTrigger render={<InputGroupButton size="icon-xs" aria-label={`Contoh ${label.toLocaleLowerCase('id-ID')}`} />}><InfoIcon /></PopoverTrigger>
     <PopoverContent align="end" sideOffset={8} className="w-80 max-w-[calc(100vw-2rem)]">
       <PopoverHeader><PopoverTitle>{label}</PopoverTitle><PopoverDescription>{descriptions[kind]}</PopoverDescription></PopoverHeader>
       <MeasurementDiagram kind={kind} value={value} label={label} />
-      <p className="text-sm text-muted-foreground">{(kind === 'gapX' || kind === 'gapY') && value === 0 ? '0 mm berarti kedua label berdempetan, tanpa sela. ' : ''}Ilustrasi tidak berskala. Ukur lembar stiker asli dengan penggaris.</p>
+      <p className="text-sm text-muted-foreground">{(kind === 'gapX' || kind === 'gapY') && value === 0 ? '0 mm berarti kedua label berdempetan, tanpa sela. ' : ''}Ilustrasi tidak berskala. {['vertical', 'lineHeight', 'offsetX', 'offsetY'].includes(kind) ? 'Periksa pratinjau sebelum mencetak. Pergeseran yang terlalu jauh dapat membuat teks tidak muat.' : 'Ukur lembar stiker asli dengan penggaris.'}</p>
     </PopoverContent>
   </Popover>
 }

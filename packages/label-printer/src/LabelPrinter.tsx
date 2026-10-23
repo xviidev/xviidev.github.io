@@ -253,12 +253,10 @@ export default function LabelPrinter() {
             <FieldGroup className="grid grid-cols-2 gap-3">
               <NumberField help="padding" label="Ruang dalam (mm)" value={settings.padding} onChange={value => update('padding', value)} />
               <Field className=""><FieldLabel htmlFor="label-setting-4">Huruf</FieldLabel><SelectInput id="label-setting-4" className="w-full" value={settings.font} onValueChange={value => update('font',value as LabelSettings['font'])} options={[{value:'sans',label:'Sans (Noto Sans)'},{value:'mono',label:'JetBrains Mono'}]} /></Field>
-              <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><SelectInput id="label-setting-6" className="w-full" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /></Field>
-            </FieldGroup>
-            <FieldGroup className="mt-4 grid grid-cols-2 gap-3">
-              <NumberField icon={Rows3Icon} label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
-              <NumberField icon={MoveHorizontalIcon} label="Geser X (mm)" value={settings.offsetX ?? 0} onChange={value => update('offsetX', value)} min={-1000} />
-              <NumberField icon={MoveVerticalIcon} label="Geser Y (mm)" value={settings.offsetY ?? 0} onChange={value => update('offsetY', value)} min={-1000} />
+              <Field><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><InputGroup><InputGroupAddon><MoveVerticalIcon aria-hidden="true" /></InputGroupAddon><SelectInput id="label-setting-6" className="min-w-0 flex-1 border-0 px-2" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /><InputGroupAddon align="inline-end"><MeasurementHelp kind="vertical" label="Posisi vertikal" value={settings.vertical} /></InputGroupAddon></InputGroup></Field>
+              <NumberField help="lineHeight" unit="×" icon={Rows3Icon} label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
+              <NumberField help="offsetX" icon={MoveHorizontalIcon} label="Geser X (mm)" value={settings.offsetX ?? 0} onChange={value => update('offsetX', value)} min={-1000} />
+              <NumberField help="offsetY" icon={MoveVerticalIcon} label="Geser Y (mm)" value={settings.offsetY ?? 0} onChange={value => update('offsetY', value)} min={-1000} />
             </FieldGroup>
             <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>

@@ -31,10 +31,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         <a class="inline-block" href="/" aria-label="XVII Dev — Beranda">
           <img src="/assets/logo.svg" class="block size-11" width="44" height="44" alt="Logo XVII Dev" />
         </a>
-        <nav aria-label="Navigasi utama" class="flex items-center gap-4 text-xs text-muted-foreground sm:gap-6">
-          <a class="hover:text-foreground" href="/#tentang">Tentang</a>
-          <a class="hover:text-foreground" href="/#proyek">Proyek</a>
-          <a class="hover:text-foreground aria-[current=page]:text-foreground" href="/utilities/" aria-current={Astro.url.pathname.startsWith('/utilities') ? 'page' : undefined}>Utilitas</a>
+        <nav aria-label="Navigasi utama" class="flex items-center gap-2 text-muted-foreground">
+          <a class="flex size-10 items-center justify-center hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring" href="/#tentang" aria-label="Tentang saya" title="Tentang saya">
+            <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></svg>
+          </a>
+          <a class="flex size-10 items-center justify-center hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring" href="https://xvii.dev/utilities/" aria-label="Buka utilitas" title="Utilitas">
+            <svg class="size-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+          </a>
         </nav>
       </header>
       <main id="main"><slot /></main>
