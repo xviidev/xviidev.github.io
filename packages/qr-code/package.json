@@ -1,0 +1,26 @@
+{
+  "name": "@xviidev/qr-code",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test src/lib/qr.test.ts"
+  },
+  "exports": {
+    ".": "./src/index.tsx",
+    "./metadata": "./src/metadata.ts"
+  },
+  "dependencies": {
+    "@xviidev/ui": "*",
+    "react": "^19.3.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "jsqr": "^1.4.0"
+  }
+}

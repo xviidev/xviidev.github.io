@@ -1,3 +1,4 @@
 import { labelPrinter } from '@xviidev/label-printer/metadata'
-export const utilityMetadata = [labelPrinter]
+import { qrCode } from '@xviidev/qr-code/metadata'
+export const utilityMetadata = [labelPrinter, qrCode]
 export const legacyPaths = { '/utilitas/': '/utilities/', '/utilitas/cetak-label/': '/utilities/labels/', '/utilitas/label-printer/': '/utilities/labels/', '/utilities/cetak-label/': '/utilities/labels/', '/utilities/label-printer/': '/utilities/labels/' }

@@ -17,7 +17,8 @@
     "@xviidev/label-printer": "*",
     "@xviidev/ui": "*",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "@xviidev/qr-code": "*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

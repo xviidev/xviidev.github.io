@@ -1,0 +1,1 @@
+export const qrCode = { slug: 'qr-code', title: 'Pembuat QR code', description: 'Ubah teks, tautan, Wi-Fi, atau WhatsApp menjadi QR code. Unduh sebagai PNG atau SVG.', category: 'Data', keywords: ['qr', 'qrcode', 'barcode', 'tautan', 'wifi', 'whatsapp', 'png', 'svg'] } as const

@@ -19,7 +19,7 @@ export function UtilityCatalog() {
    <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">Kumpulan alat untuk hal-hal yang perlu diselesaikan. Pilih utilitas, lalu kerjakan langsung di browser.</p>
   </section>
   <div className="mb-6"><InputGroup>
-   <InputGroupInput aria-label="Cari utilitas" placeholder="Cari utilitas, misalnya label atau Excel…" value={query} onChange={event=>setQuery(event.target.value)} />
+   <InputGroupInput aria-label="Cari utilitas" placeholder="Cari utilitas, misalnya label, Excel, atau QR…" value={query} onChange={event=>setQuery(event.target.value)} />
    <InputGroupAddon><SearchIcon /></InputGroupAddon>
    {query && <InputGroupAddon align="inline-end"><InputGroupButton aria-label="Hapus pencarian" size="icon-xs" onClick={()=>setQuery('')}><XIcon /></InputGroupButton></InputGroupAddon>}
   </InputGroup></div>
@@ -35,10 +35,10 @@ export function UtilityCatalog() {
        <CardHeader className="gap-4"><div className="flex items-center justify-between"><tool.icon className="size-5" aria-hidden="true" /><Badge variant="outline">{tool.category}</Badge></div><CardTitle role="heading" aria-level={3}>{tool.title}</CardTitle><CardDescription>{tool.description}</CardDescription></CardHeader>
        <CardFooter><Button role="link" nativeButton={false} variant="outline" size="sm" className="w-full" aria-label={`Buka ${tool.title}`} render={<Link to={`/${tool.slug}`} />}>Buka utilitas<ArrowUpRightIcon data-icon="inline-end" /></Button></CardFooter>
       </Card>)}</div>
-     </section>) : <Empty className="border"><EmptyHeader><EmptyTitle>Belum ditemukan</EmptyTitle><EmptyDescription>Coba kata lain, seperti label, Excel, atau PDF.</EmptyDescription></EmptyHeader><EmptyContent><Button variant="outline" onClick={()=>setQuery('')}>Hapus pencarian</Button></EmptyContent></Empty>}
+     </section>) : <Empty className="border"><EmptyHeader><EmptyTitle>Belum ditemukan</EmptyTitle><EmptyDescription>Coba kata lain, seperti label, Excel, atau QR.</EmptyDescription></EmptyHeader><EmptyContent><Button variant="outline" onClick={()=>setQuery('')}>Hapus pencarian</Button></EmptyContent></Empty>}
     </TabsContent>
    })}
   </Tabs>
-  <div className="mt-12 flex items-start gap-3 border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground"><ShieldCheckIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><p>Pada cetak label, berkas Excel dan data penerima diproses di perangkat Anda.</p></div>
+  <div className="mt-12 flex items-start gap-3 border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground"><ShieldCheckIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><p>Data cetak label dan pembuat QR code diproses di perangkat Anda, tanpa diunggah ke server.</p></div>
  </div>
 }
