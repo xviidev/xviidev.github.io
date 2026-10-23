@@ -1,10 +1,21 @@
 import { useId } from 'react'
 import { InputGroupButton } from '@xviidev/ui/components/input-group'
 import { Popover, PopoverTrigger, PopoverContent, PopoverHeader, PopoverTitle, PopoverDescription } from '@xviidev/ui/components/popover'
-import { InfoIcon } from '@xviidev/ui/lib/icons'
+import { InfoIcon, MoveHorizontalIcon, MoveVerticalIcon, PanelTopIcon, PanelBottomIcon, PanelLeftIcon, PanelRightIcon, RectangleHorizontalIcon } from '@xviidev/ui/lib/icons'
 
-export type MeasurementKind = 'gapX' | 'gapY' | 'marginTop' | 'marginBottom' | 'marginLeft' | 'marginRight' | 'padding'
+export type MeasurementKind = 'paperWidth' | 'paperHeight' | 'labelWidth' | 'labelHeight' | 'gapX' | 'gapY' | 'marginTop' | 'marginBottom' | 'marginLeft' | 'marginRight' | 'padding'
+export const measurementIcons = {
+  paperWidth: MoveHorizontalIcon, paperHeight: MoveVerticalIcon,
+  labelWidth: MoveHorizontalIcon, labelHeight: MoveVerticalIcon,
+  gapX: MoveHorizontalIcon, gapY: MoveVerticalIcon,
+  marginTop: PanelTopIcon, marginBottom: PanelBottomIcon,
+  marginLeft: PanelLeftIcon, marginRight: PanelRightIcon, padding: RectangleHorizontalIcon,
+} satisfies Record<MeasurementKind, typeof InfoIcon>
 const descriptions: Record<MeasurementKind, string> = {
+  paperWidth: 'Ukuran seluruh lembar kertas dari tepi kiri ke tepi kanan, termasuk margin. Bukan lebar satu stiker. A4 tegak memiliki lebar 210 mm.',
+  paperHeight: 'Ukuran seluruh lembar kertas dari tepi atas ke tepi bawah, termasuk margin. A4 tegak memiliki tinggi 297 mm. Gunakan Putar kertas untuk menukar lebar dan tinggi.',
+  labelWidth: 'Lebar satu stiker dari tepi kiri ke tepi kanan. Jangan sertakan sela antarstiker atau margin kertas.',
+  labelHeight: 'Tinggi satu stiker dari tepi atas ke tepi bawah. Jangan sertakan sela antarbaris atau margin kertas.',
   gapX: 'Sela antara tepi kanan satu label dan tepi kiri label di sebelahnya. Bukan jarak dari pusat ke pusat label.',
   gapY: 'Sela antara tepi bawah satu label dan tepi atas label pada baris berikutnya.',
   marginTop: 'Jarak dari tepi atas kertas ke tepi atas baris label pertama.',
@@ -20,7 +31,15 @@ function MeasurementDiagram({ kind, value, label }: { kind: MeasurementKind; val
   const cell = (x: number, y: number, width: number, height: number, text?: string) => <g><rect x={x} y={y} width={width} height={height} className="fill-muted stroke-muted-foreground" strokeWidth={1.5} />{text && <text x={x + width / 2} y={y + height / 2 + 4} textAnchor="middle" fill="currentColor" fontSize={13}>{text}</text>}</g>
   return <svg viewBox="0 0 300 205" className="block h-auto w-full" role="img" aria-label={`Ilustrasi ${label.toLocaleLowerCase('id-ID')}, ${number} milimeter`}>
     <defs><marker id={arrow} viewBox="0 0 6 6" refX={3} refY={3} markerWidth={5} markerHeight={5} orient="auto-start-reverse"><path d="M0 0L6 3L0 6Z" fill="currentColor" /></marker></defs>
-    {kind === 'gapX' ? <>
+    {kind === 'paperWidth' || kind === 'paperHeight' || kind === 'labelWidth' || kind === 'labelHeight' ? <>
+      <rect x={55} y={18} width={170} height={144} className="fill-background stroke-muted-foreground" strokeWidth={1.5} />
+      {cell(77, 40, 58, 40)}{cell(148, 40, 58, 40)}{cell(77, 94, 58, 40)}{cell(148, 94, 58, 40)}
+      {kind === 'paperWidth' && <><path d="M55 165V183M225 165V183" className="stroke-muted-foreground" /><line x1={60} x2={220} y1={176} y2={176} {...arrowProps} /></>}
+      {kind === 'paperHeight' && <><path d="M228 18H254M228 162H254" className="stroke-muted-foreground" /><line x1={246} x2={246} y1={23} y2={157} {...arrowProps} /></>}
+      {kind === 'labelWidth' && <><rect x={77} y={40} width={58} height={40} fill="none" stroke="currentColor" strokeWidth={2} /><line x1={82} x2={130} y1={62} y2={62} {...arrowProps} /></>}
+      {kind === 'labelHeight' && <><rect x={77} y={40} width={58} height={40} fill="none" stroke="currentColor" strokeWidth={2} /><line x1={106} x2={106} y1={45} y2={75} {...arrowProps} /></>}
+      <text x={150} y={201} textAnchor="middle" fill="currentColor" fontSize={14}>{label}: {number} mm</text>
+    </> : kind === 'gapX' ? <>
       {cell(24, 42, 100, 64, 'Label A')}{cell(value === 0 ? 124 : 164, 42, 100, 64, 'Label B')}
       {value === 0 ? <line x1={124} x2={124} y1={35} y2={124} stroke="currentColor" strokeWidth={2} /> : <><path d="M124 110V138M164 110V138" className="stroke-muted-foreground" fill="none" /><line x1={128} x2={160} y1={126} y2={126} {...arrowProps} /></>}
       <text x={150} y={163} textAnchor="middle" fill="currentColor" fontSize={14}>Jarak mendatar: {number} mm</text>

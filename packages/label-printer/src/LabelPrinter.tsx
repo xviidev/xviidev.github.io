@@ -1,10 +1,10 @@
-import { MeasurementHelp } from './components/MeasurementHelp'
+import { MeasurementHelp, measurementIcons } from './components/MeasurementHelp'
 import type { MeasurementKind } from './components/MeasurementHelp'
-import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText } from '@xviidev/ui/components/input-group'
+import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText, InputGroupTextarea } from '@xviidev/ui/components/input-group'
 import { applyPaperPreset, paperSettings } from './lib/presets'
 import { Separator } from '@xviidev/ui/components/separator'
 import { DocumentPresets } from './components/DocumentPresets'
-import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon } from '@xviidev/ui/lib/icons'
+import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon, FileTextIcon, CopyIcon, HashIcon, Rows3Icon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@xviidev/ui/components/empty'
 import { Skeleton } from '@xviidev/ui/components/skeleton'
 import { Checkbox } from '@xviidev/ui/components/checkbox'
@@ -33,11 +33,13 @@ import { decodeTemplate } from './lib/template-file'
 import type { DocumentPreset } from './lib/presets'
 
 interface WorkbookSheet { sheet: string; data: unknown[][] }
-function NumberField({ label, value, onChange, min = 0, step = 0.1, max = 1000, unit, help }: { label: string; value: number; onChange: (value: number) => void; min?: number; step?: number; max?: number; unit?: string; help?: MeasurementKind }) {
+function NumberField({ label, value, onChange, min = 0, step = 0.1, max = 1000, unit, help, icon = RulerIcon }: { icon?: typeof RulerIcon; label: string; value: number; onChange: (value: number) => void; min?: number; step?: number; max?: number; unit?: string; help?: MeasurementKind }) {
   const id = useId()
   const suffix = unit ?? (label.endsWith(' (mm)') ? 'mm' : undefined)
+  const Icon = help ? measurementIcons[help] : icon
   const title = label.replace(/ \(mm\)$/, '')
   return <Field><FieldLabel htmlFor={id}>{title}</FieldLabel><InputGroup>
+    <InputGroupAddon><Icon aria-hidden="true" /></InputGroupAddon>
     <InputGroupInput id={id} aria-label={label} type="number" min={min} max={max} step={step} value={Number.isFinite(value) ? value : ''} onChange={event => onChange(Number(event.target.value))} />
     {(suffix || help) && <InputGroupAddon align="inline-end">{suffix && <InputGroupText>{suffix}</InputGroupText>}{help && <MeasurementHelp kind={help} label={title} value={value} />}</InputGroupAddon>}
   </InputGroup></Field>
@@ -50,10 +52,11 @@ function download(blob: Blob, filename: string) {
 
 export default function LabelPrinter() {
   const [mode, setMode] = useState<'manual' | 'excel'>('manual')
-  const [manualDoc, setManualDoc] = useState<RichDocument>([])
+  const [manualText, setManualText] = useState('')
+  const manualDoc = useMemo(() => fromText(manualText), [manualText])
   const [templateDoc, setTemplateDoc] = useState<RichDocument>(() => makeTemplate())
-  const [manualRevision, setManualRevision] = useState(0), [templateRevision, setTemplateRevision] = useState(0)
-  const [applyTemplate, setApplyTemplate] = useState(false)
+  const [templateRevision, setTemplateRevision] = useState(0)
+  const [applyTemplate, setApplyTemplate] = useState(true)
   const [sheets, setSheets] = useState<WorkbookSheet[]>([])
   const [sheetIndex, setSheetIndex] = useState(0), [header, setHeader] = useState(true)
   const [filename, setFilename] = useState(''), [fileError, setFileError] = useState(''), [templateMessage, setTemplateMessage] = useState('')
@@ -133,10 +136,7 @@ export default function LabelPrinter() {
   }
   function setTemplate(document: RichDocument) { setTemplateDoc(document); setTemplateRevision(value => value + 1) }
   function useExample() {
-    const doc = fromText('Budi Santoso\nJl. Persatuan No. 12\n-\nSinjai\n\nSari Wulandari\nJl. Pendidikan No. 8\n-\nMakassar')
-    let first = true
-    for (const line of doc) { if (!documentText([line]).trim()) { first = true; continue }; if (first) { line.runs = line.runs.map(run => ({ ...run, weight: 700 })); first = false } }
-    setManualDoc(doc); setManualRevision(value => value + 1)
+    setManualText('Budi Santoso\nJl. Persatuan No. 12\nSinjai\n\nSari Wulandari\n-\nMakassar')
   }
   async function importExcel(file: File | undefined) {
     if (!file) return
@@ -185,7 +185,7 @@ export default function LabelPrinter() {
   }
   return <>
     <div className="mb-6"><h1 className="mb-2 text-2xl font-medium">Cetak label</h1>
-      <p className="max-w-2xl text-muted-foreground">Pilih kertas, isi label, lalu cetak. Format teks diatur langsung di editor.</p>
+      <p className="max-w-2xl text-muted-foreground">Pilih kertas, isi label, lalu cetak. Format teks diatur di Desain label.</p>
       <p className="mt-3 text-sm text-muted-foreground">Isi label tidak diunggah atau disimpan. Preset tetap tersedia di browser ini; isi label dihapus saat halaman dimuat ulang.</p>
     </div>
     <DocumentPresets settings={settings} onApply={applyDocumentPreset}>
@@ -198,10 +198,10 @@ export default function LabelPrinter() {
               if (size) { setSettings(previous=>({...previous,paperWidth:size[0],paperHeight:size[1]}));setPreset('custom') }
             }} options={[{value:'a4',label:'A4'},{value:'a5',label:'A5'},{value:'letter',label:'Letter'},{value:'custom',label:'Ukuran sendiri / lanskap'}]} /></Field>
             <FieldGroup className="grid grid-cols-2 gap-3">
-              <NumberField label="Lebar kertas (mm)" value={settings.paperWidth} onChange={value => update('paperWidth', value)} min={1} />
-              <NumberField label="Tinggi kertas (mm)" value={settings.paperHeight} onChange={value => update('paperHeight', value)} min={1} />
-              <NumberField label="Lebar label (mm)" value={settings.labelWidth} onChange={value => update('labelWidth', value)} min={1} />
-              <NumberField label="Tinggi label (mm)" value={settings.labelHeight} onChange={value => update('labelHeight', value)} min={1} />
+              <NumberField help="paperWidth" label="Lebar kertas (mm)" value={settings.paperWidth} onChange={value => update('paperWidth', value)} min={1} />
+              <NumberField help="paperHeight" label="Tinggi kertas (mm)" value={settings.paperHeight} onChange={value => update('paperHeight', value)} min={1} />
+              <NumberField help="labelWidth" label="Lebar label (mm)" value={settings.labelWidth} onChange={value => update('labelWidth', value)} min={1} />
+              <NumberField help="labelHeight" label="Tinggi label (mm)" value={settings.labelHeight} onChange={value => update('labelHeight', value)} min={1} />
               <NumberField help="marginTop" label="Margin atas (mm)" value={settings.marginTop} onChange={value => update('marginTop', value)} />
               <NumberField help="marginBottom" label="Margin bawah (mm)" value={settings.marginBottom} onChange={value => update('marginBottom', value)} />
               <NumberField help="marginLeft" label="Margin kiri (mm)" value={settings.marginLeft} onChange={value => update('marginLeft', value)} step={0.05} />
@@ -221,10 +221,13 @@ export default function LabelPrinter() {
            <TabsList aria-label="Sumber data label" className="w-full"><TabsTrigger value="manual">Isi manual</TabsTrigger><TabsTrigger value="excel">Dari Excel</TabsTrigger></TabsList>
            <TabsContent value={mode} className="mt-4">
           {mode === 'manual' ? <>
-            <RichTextEditor key={`manual-${manualRevision}`} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Isi label manual" initialDocument={manualDoc} onChange={setManualDoc} />
-            <p className="hint flex items-start gap-2"><InfoIcon className="mt-0.5 size-4 shrink-0" /><span>Enter untuk baris baru. Satu baris kosong memisahkan label. Baris yang hanya berisi - tidak ikut dicetak. Pilih teks untuk mengatur formatnya. Tanpa seleksi, ukuran huruf berlaku pada baris aktif.</span></p>
+            <Field><FieldLabel htmlFor="manual-data">Isi label manual</FieldLabel><InputGroup>
+              <InputGroupTextarea id="manual-data" aria-describedby="manual-data-help" className="min-h-56" value={manualText} onChange={event => setManualText(event.target.value)} placeholder={'Nama penerima\nAlamat\nKota\n\nNama penerima berikutnya\nAlamat\nKota'} />
+              <InputGroupAddon align="block-end"><InputGroupText><FileTextIcon aria-hidden="true" />Satu label per blok teks</InputGroupText></InputGroupAddon>
+            </InputGroup></Field>
+            <p id="manual-data-help" className="hint flex items-start gap-2"><InfoIcon className="mt-0.5 size-4 shrink-0" /><span>Enter untuk baris baru. Satu baris kosong memisahkan label. Baris yang hanya berisi - tidak ikut dicetak. Atur tebal, miring, ukuran, dan perataan pada template di Desain label.</span></p>
             <Button variant="link" size="sm" className=" mt-3" onClick={useExample}>{documentText(manualDoc).trim() ? 'Ganti dengan contoh' : 'Isi contoh'}</Button>
-            <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="manual-template" checked={applyTemplate} onCheckedChange={setApplyTemplate} /><FieldLabel htmlFor="manual-template">Gunakan template untuk semua label manual</FieldLabel></Field></FieldSet>
+            <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="manual-template" checked={applyTemplate} onCheckedChange={setApplyTemplate} /><FieldLabel htmlFor="manual-template">Terapkan desain yang sama ke semua label</FieldLabel></Field></FieldSet>
             {applyTemplate && <p className="hint">Setiap baris manual menjadi kolom: baris 1 = {'{{1}}'}, baris 2 = {'{{2}}'}, dan seterusnya. Gunakan - untuk baris data yang kosong.</p>}
           </> : <>
             <Field><FieldLabel htmlFor="excel-file">Berkas Excel (.xlsx)</FieldLabel><Input id="excel-file" type="file" accept=".xlsx" onChange={event => { void importExcel(event.target.files?.[0]); event.target.value = '' }} /></Field>
@@ -235,7 +238,7 @@ export default function LabelPrinter() {
            </TabsContent>
           </Tabs>
           {showTemplate && <p className="hint">Atur format baris dan pemetaan kolom di Desain label di bawah. {mode === 'excel' ? templateMessage : ''}</p>}
-          <div className="mt-5 grid grid-cols-2 gap-3"><NumberField unit="kali" label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3"><NumberField unit="kali" icon={CopyIcon} label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField icon={HashIcon} label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
         </FieldGroup></CardContent></Card>
         <Card size="sm" className="mt-4" aria-labelledby="design-title"><CardHeader><CardTitle id="design-title" role="heading" aria-level={2}><TypeIcon className="mr-2 inline size-4" />Desain label</CardTitle></CardHeader><CardContent>
           <p className="hint mb-4">Atur tebal, miring, ukuran huruf, dan perataan langsung di editor. Pengaturan di bawah berlaku untuk seluruh label dan tidak ikut disimpan dalam preset kertas.</p>
@@ -253,9 +256,9 @@ export default function LabelPrinter() {
               <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><SelectInput id="label-setting-6" className="w-full" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /></Field>
             </FieldGroup>
             <FieldGroup className="mt-4 grid grid-cols-2 gap-3">
-              <NumberField label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
-              <NumberField label="Geser X (mm)" value={settings.offsetX ?? 0} onChange={value => update('offsetX', value)} min={-1000} />
-              <NumberField label="Geser Y (mm)" value={settings.offsetY ?? 0} onChange={value => update('offsetY', value)} min={-1000} />
+              <NumberField icon={Rows3Icon} label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
+              <NumberField icon={MoveHorizontalIcon} label="Geser X (mm)" value={settings.offsetX ?? 0} onChange={value => update('offsetX', value)} min={-1000} />
+              <NumberField icon={MoveVerticalIcon} label="Geser Y (mm)" value={settings.offsetY ?? 0} onChange={value => update('offsetY', value)} min={-1000} />
             </FieldGroup>
             <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>
