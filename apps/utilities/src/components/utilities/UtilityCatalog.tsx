@@ -15,8 +15,8 @@ export function UtilityCatalog() {
  return <div className="mx-auto w-full max-w-6xl px-5 py-12 md:px-8 md:py-20">
   <section className="mx-auto mb-10 flex max-w-3xl flex-col items-center gap-5 text-center md:mb-14">
    <Badge variant="outline">XVII / Utilitas</Badge>
-   <h1 className="text-3xl leading-tight font-medium tracking-tight sm:text-5xl">Peralatan untuk <span className="whitespace-nowrap">sehari-hari.</span></h1>
-   <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">Di sini saya kumpulkan alat-alat yang saya buat. Kalau ada yang kamu perlukan, silakan dipakai.</p>
+   <h1 className="text-3xl leading-tight font-medium tracking-tight sm:text-5xl">Siapa tahu kepakai.</h1>
+   <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">Ini beberapa alat yang saya buat. Saya kumpulkan di sini supaya kamu juga bisa pakai.</p>
   </section>
   <div className="mb-6"><InputGroup>
    <InputGroupInput aria-label="Cari utilitas" placeholder="Cari utilitas, misalnya label, Excel, atau QR…" value={query} onChange={event=>setQuery(event.target.value)} />
