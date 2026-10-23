@@ -1,5 +1,7 @@
+import { applyPaperPreset, paperSettings } from './lib/presets'
+import { Separator } from '@xviidev/ui/components/separator'
 import { DocumentPresets } from './components/DocumentPresets'
-import { FileTextIcon, RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon } from '@xviidev/ui/lib/icons'
+import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon } from '@xviidev/ui/lib/icons'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@xviidev/ui/components/empty'
 import { Skeleton } from '@xviidev/ui/components/skeleton'
 import { Checkbox } from '@xviidev/ui/components/checkbox'
@@ -68,6 +70,7 @@ export default function LabelPrinter() {
     catch (error) { return { labels: [] as RichDocument[], error: error instanceof Error ? error.message : 'Data tidak valid.' } }
   }, [sourceLabels, copies])
   const layout = useMemo(() => getLayout(settings), [settings])
+  const paperLayout = useMemo(() => getLayout({ ...DEFAULT_SETTINGS, ...paperSettings(settings), padding: 0 }), [settings])
   const startError = !Number.isInteger(start) || start < 1 || (layout.capacity > 0 && start > layout.capacity) ? 'Posisi awal harus berada dalam jumlah label per lembar.' : ''
   const baseErrors = [...layout.errors, ...templateIssues, labelResult.error, startError, mode === 'excel' ? fileError : ''].filter(Boolean)
   const texts = useMemo(() => labelResult.labels.map(documentText), [labelResult.labels])
@@ -106,11 +109,11 @@ export default function LabelPrinter() {
   }
   function applyDocumentPreset(value: DocumentPreset) {
     const next = value.settings
-    setSettings({ ...next }); setTemplate(value.document); setStart(1)
+    setSettings(previous => applyPaperPreset(previous, next)); setStart(1)
     const isA4 = next.paperWidth === 210 && next.paperHeight === 297
     setPreset(isA4 && next.labelWidth === 63.5 ? next.labelHeight === 33.9 ? '24' : next.labelHeight === 38.1 ? '21' : 'custom' : 'custom')
     setPaperChoice(isA4 ? 'a4' : next.paperWidth === 148 && next.paperHeight === 210 ? 'a5' : next.paperWidth === 215.9 && next.paperHeight === 279.4 ? 'letter' : 'custom')
-    setPrintMessage(''); setTemplateMessage('')
+    setPrintMessage('')
   }
   function selectPreset(value: string) {
     setPreset(value); setStart(1)
@@ -141,22 +144,22 @@ export default function LabelPrinter() {
       if (workbook.some(sheet => sheet.data.length > 5001 || sheet.data.some(row => row.length > 100))) throw new Error('Maksimal 5.000 baris data dan 100 kolom per sheet.')
       const index = Math.max(0, workbook.findIndex(sheet => sheet.data.length > 0))
       const count = workbook[index].data.reduce((max, row) => Math.max(max, row.length), 0)
-      setSheets(workbook); setSheetIndex(index); setFilename(file.name); setHeader(true); setTemplateMessage(`Berkas memiliki ${count} kolom. Sesuaikan Format baris pada Atur preset jika diperlukan.`); setCurrentPage(0)
+      setSheets(workbook); setSheetIndex(index); setFilename(file.name); setHeader(true); setTemplateMessage(`Berkas memiliki ${count} kolom. Sesuaikan pemetaan kolom di Desain label jika diperlukan.`); setCurrentPage(0)
     } catch (error) { if (version === uploadVersion.current) setFileError(error instanceof Error ? error.message : 'Berkas gagal dibaca.') }
     finally { if (version === uploadVersion.current) setLoading(false) }
   }
   function saveTemplate() {
     download(new Blob([JSON.stringify({ version: 1, document: templateDoc, settings }, null, 2)], { type: 'application/json' }), 'template-label.json')
-    setTemplateMessage('Cadangan JSON diunduh. Untuk menyimpan di browser, pilih Simpan perubahan atau Simpan sebagai baru.')
+    setTemplateMessage('Desain diunduh. Berkas desain terpisah dari preset kertas.')
   }
   async function openTemplate(file: File | undefined) {
     if (!file) return
     try {
       if (file.size > 1024 * 1024) throw new Error('Ukuran berkas template maksimal 1 MB.')
       const decoded = decodeTemplate(await file.text())
-      setTemplate(decoded.document); setSettings(decoded.settings); setPreset('custom'); setPaperChoice('custom'); setApplyTemplate(true); setStart(1)
+      setTemplate(decoded.document); setSettings(previous => ({ ...decoded.settings, ...paperSettings(previous) })); setApplyTemplate(true)
       setTemplateMessage('Template dimuat. Data penerima tetap menggunakan input saat ini.')
-    } catch { setTemplateMessage('Cadangan tidak valid. Gunakan berkas JSON dari tombol Unduh cadangan JSON.') }
+    } catch { setTemplateMessage('Desain tidak valid. Gunakan berkas JSON dari tombol Unduh desain JSON.') }
   }
   async function exportPdf(open: boolean) {
     if (!canExport || !model) return
@@ -174,12 +177,11 @@ export default function LabelPrinter() {
   }
   return <>
     <div className="mb-6"><h1 className="mb-2 text-2xl font-medium">Cetak label</h1>
-      <p className="max-w-2xl text-muted-foreground">Pilih preset, isi label, lalu cetak. Ukuran dan tata letak mengikuti preset Anda.</p>
+      <p className="max-w-2xl text-muted-foreground">Pilih kertas, isi label, lalu cetak. Format teks diatur langsung di editor.</p>
       <p className="mt-3 text-sm text-muted-foreground">Isi label tidak diunggah atau disimpan. Preset tetap tersedia di browser ini; isi label dihapus saat halaman dimuat ulang.</p>
     </div>
-    <DocumentPresets settings={settings} document={templateDoc} onApply={applyDocumentPreset}>
-      <Accordion defaultValue={['paper']}>
-        <AccordionItem value="paper"><AccordionTrigger><span className="flex items-center gap-2"><RulerIcon className="size-4" />1. Ukuran kertas dan label</span></AccordionTrigger><AccordionContent>          <Card size="sm" aria-labelledby="layout-title"><CardHeader><CardTitle id="layout-title" role="heading" aria-level={2}><RulerIcon className="mr-2 inline size-4" />Kertas &amp; ukuran</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
+    <DocumentPresets settings={settings} onApply={applyDocumentPreset}>
+      <Card size="sm" aria-labelledby="layout-title"><CardHeader><CardTitle id="layout-title" role="heading" aria-level={2}><RulerIcon className="mr-2 inline size-4" />Kertas &amp; ukuran</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
             <Field className=""><FieldLabel htmlFor="label-setting-2">Isi cepat ukuran lembar</FieldLabel><SelectInput id="label-setting-2" className="w-full" value={preset} onValueChange={selectPreset} options={[{value:'24',label:'A4 · 24 label · 63,5 × 33,9 mm'},{value:'21',label:'A4 · 21 label · 63,5 × 38,1 mm'},{value:'custom',label:'Ukuran sendiri'}]} /></Field>
             <p className="hint mb-4">Ukur kertas stiker Anda dengan penggaris. Margin adalah jarak dari tepi kertas ke label pertama; jarak label adalah sela antarstiker. Semua ukuran dalam milimeter (mm).</p>
             <Field className=" mb-4"><FieldLabel htmlFor="label-setting-3">Kertas</FieldLabel><SelectInput id="label-setting-3" className="w-full" value={paperChoice} onValueChange={value => {
@@ -199,35 +201,10 @@ export default function LabelPrinter() {
               <NumberField label="Jarak mendatar (mm)" value={settings.gapX} onChange={value => update('gapX', value)} />
               <NumberField label="Jarak menurun (mm)" value={settings.gapY} onChange={value => update('gapY', value)} />
             </FieldGroup>
-            <p className="hint" aria-live="polite">{layout.errors.length ? 'Periksa ukuran: ' + layout.errors.join(' ') : `${layout.columns} kolom × ${layout.rows} baris = ${layout.capacity} label per lembar.`}</p>
+            <p className="hint" aria-live="polite">{paperLayout.errors.length ? 'Periksa ukuran: ' + paperLayout.errors.join(' ') : `${paperLayout.columns} kolom × ${paperLayout.rows} baris = ${paperLayout.capacity} label per lembar.`}</p>
             <Button variant="link" size="sm" className=" mt-4" onClick={() => { setSettings(previous => ({ ...previous, paperWidth: previous.paperHeight, paperHeight: previous.paperWidth })); setPreset('custom'); setPaperChoice('custom') }}>Putar kertas</Button>
 
-          </FieldGroup></CardContent></Card></AccordionContent></AccordionItem>
-        <AccordionItem value="format"><AccordionTrigger><span className="flex items-center gap-2"><FileTextIcon className="size-4" />2. Format setiap baris</span></AccordionTrigger><AccordionContent>        <Card size="sm" aria-labelledby="template-title"><CardHeader><CardTitle id="template-title" role="heading" aria-level={2}>Format baris</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
-          <p className="hint mb-3">Format ini dipakai pada Excel atau saat opsi template manual diaktifkan. Penanda {'{{1}}'} mengambil kolom pertama Excel atau baris pertama input manual; {'{{2}}'} mengambil yang kedua. Pilih penandanya untuk mengatur huruf. Contoh: baris {'{{1}}'} tebal, baris {'{{2}}'} normal. Nilai - atau kosong diabaikan tanpa menyisakan ruang. Jika semua kolom pada satu baris kosong, awalan teks baris itu juga dihapus.</p>
-          <RichTextEditor key={`template-${templateRevision}`} ref={templateRef} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Template label" initialDocument={templateDoc} onChange={setTemplateDoc} />
-          <p className="mt-4 mb-2 text-sm">Sisipkan kolom di posisi kursor</p><div className="flex max-h-40 flex-wrap gap-2 overflow-auto">{Array.from({ length: Math.min(columnCount, 100) }, (_, column) => <Button key={column} variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => templateRef.current?.insertText(`{{${column + 1}}}`)}>{`{{${column + 1}}}`} {mode === 'excel' && header ? formatCell(rows[0]?.[column]) : `Baris ${column + 1}`}</Button>)}</div>
-          <div className="mt-4 flex flex-wrap gap-4 text-sm"><Button variant="link" size="sm" className="" onClick={() => setTemplate(makeTemplate(Math.min(columnCount, 3)))}>Template awal</Button><Button variant="link" size="sm" className="" onClick={saveTemplate}>Unduh cadangan JSON</Button><Button variant="link" size="sm" onClick={()=>templateFileRef.current?.click()}>Impor cadangan JSON</Button><Input ref={templateFileRef} className="sr-only" type="file" aria-label="Muat template JSON" accept=".json,application/json" onChange={event => { void openTemplate(event.target.files?.[0]);event.target.value='' }} /></div>
-          <p className="hint" role="status">{templateMessage}</p>
-        </FieldGroup></CardContent></Card></AccordionContent></AccordionItem>
-        <AccordionItem value="appearance"><AccordionTrigger><span className="flex items-center gap-2"><TypeIcon className="size-4" />3. Tampilan dan posisi teks</span></AccordionTrigger><AccordionContent>          <Card size="sm" aria-labelledby="text-title"><CardHeader><CardTitle id="text-title" role="heading" aria-level={2}><TypeIcon className="mr-2 inline size-4" />Tampilan cetak</CardTitle></CardHeader><CardContent><FieldGroup className="gap-4">
-            <FieldGroup className="grid grid-cols-2 gap-3">
-              <NumberField label="Ukuran huruf (pt)" value={settings.fontSize} onChange={value => update('fontSize', value)} min={1} max={100} step={0.5} />
-              <NumberField label="Ruang dalam (mm)" value={settings.padding} onChange={value => update('padding', value)} />
-              <Field className=""><FieldLabel htmlFor="label-setting-4">Huruf</FieldLabel><SelectInput id="label-setting-4" className="w-full" value={settings.font} onValueChange={value => update('font',value as LabelSettings['font'])} options={[{value:'sans',label:'Sans (Noto Sans)'},{value:'mono',label:'JetBrains Mono'}]} /></Field>
-              <Field className=""><FieldLabel htmlFor="label-setting-5">Rata teks</FieldLabel><SelectInput id="label-setting-5" className="w-full" value={settings.align} onValueChange={value => update('align',value as LabelSettings['align'])} options={[{value:'left',label:'Kiri'},{value:'center',label:'Tengah'},{value:'right',label:'Kanan'}]} /></Field>
-              <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><SelectInput id="label-setting-6" className="w-full" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /></Field>
-            </FieldGroup>
-            <FieldGroup className="mt-4 grid grid-cols-2 gap-3">
-              <NumberField label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
-              <NumberField label="Geser X (mm)" value={settings.offsetX ?? 0} onChange={value => update('offsetX', value)} min={-1000} />
-              <NumberField label="Geser Y (mm)" value={settings.offsetY ?? 0} onChange={value => update('offsetY', value)} min={-1000} />
-            </FieldGroup>
-            <p className="hint">Pengaturan ini menjadi awal untuk teks baru. Format yang Anda pilih langsung pada teks di editor tetap dipakai.</p>
-            <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
-            <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>
-          </FieldGroup></CardContent></Card></AccordionContent></AccordionItem>
-      </Accordion>
+          </FieldGroup></CardContent></Card>
     </DocumentPresets>
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(340px,0.9fr)_minmax(0,1.1fr)]">
       <div className="min-w-0">
@@ -237,7 +214,7 @@ export default function LabelPrinter() {
            <TabsContent value={mode} className="mt-4">
           {mode === 'manual' ? <>
             <RichTextEditor key={`manual-${manualRevision}`} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Isi label manual" initialDocument={manualDoc} onChange={setManualDoc} />
-            <p className="hint flex items-start gap-2"><InfoIcon className="mt-0.5 size-4 shrink-0" /><span>Enter untuk baris baru. Satu baris kosong memisahkan label. Baris yang hanya berisi - tidak ikut dicetak. Pilih teks untuk mengatur formatnya.</span></p>
+            <p className="hint flex items-start gap-2"><InfoIcon className="mt-0.5 size-4 shrink-0" /><span>Enter untuk baris baru. Satu baris kosong memisahkan label. Baris yang hanya berisi - tidak ikut dicetak. Pilih teks untuk mengatur formatnya. Tanpa seleksi, ukuran huruf berlaku pada baris aktif.</span></p>
             <Button variant="link" size="sm" className=" mt-3" onClick={useExample}>{documentText(manualDoc).trim() ? 'Ganti dengan contoh' : 'Isi contoh'}</Button>
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="manual-template" checked={applyTemplate} onCheckedChange={setApplyTemplate} /><FieldLabel htmlFor="manual-template">Gunakan template untuk semua label manual</FieldLabel></Field></FieldSet>
             {applyTemplate && <p className="hint">Setiap baris manual menjadi kolom: baris 1 = {'{{1}}'}, baris 2 = {'{{2}}'}, dan seterusnya. Gunakan - untuk baris data yang kosong.</p>}
@@ -249,9 +226,33 @@ export default function LabelPrinter() {
           </>}
            </TabsContent>
           </Tabs>
-          {showTemplate && <p className="hint">Format baris mengikuti preset. Buka Atur preset → Format setiap baris untuk mengubah huruf atau pemetaan kolom. {mode === 'excel' ? templateMessage : ''}</p>}
+          {showTemplate && <p className="hint">Atur format baris dan pemetaan kolom di Desain label di bawah. {mode === 'excel' ? templateMessage : ''}</p>}
           <div className="mt-5 grid grid-cols-2 gap-3"><NumberField label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
         </FieldGroup></CardContent></Card>
+        <Card size="sm" className="mt-4" aria-labelledby="design-title"><CardHeader><CardTitle id="design-title" role="heading" aria-level={2}><TypeIcon className="mr-2 inline size-4" />Desain label</CardTitle></CardHeader><CardContent>
+          <p className="hint mb-4">Atur tebal, miring, ukuran huruf, dan perataan langsung di editor. Pengaturan di bawah berlaku untuk seluruh label dan tidak ikut disimpan dalam preset kertas.</p>
+          {showTemplate && <><FieldGroup className="gap-4">
+          <p className="hint mb-3">Penanda {'{{1}}'} mengambil kolom pertama Excel atau baris pertama input manual; {'{{2}}'} mengambil yang kedua. Pilih penandanya untuk mengatur huruf. Contoh: baris {'{{1}}'} tebal, baris {'{{2}}'} normal. Nilai - atau kosong diabaikan tanpa menyisakan ruang. Jika semua kolom pada satu baris kosong, awalan teks baris itu juga dihapus.</p>
+          <RichTextEditor key={`template-${templateRevision}`} ref={templateRef} fontFamily={settings.font === 'mono' ? 'JetBrains Mono' : 'Noto Sans'} fontSize={settings.fontSize} lineHeight={settings.lineHeight} label="Template label" initialDocument={templateDoc} onChange={setTemplateDoc} />
+          <p className="mt-4 mb-2 text-sm">Sisipkan kolom di posisi kursor</p><div className="flex max-h-40 flex-wrap gap-2 overflow-auto">{Array.from({ length: Math.min(columnCount, 100) }, (_, column) => <Button key={column} variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => templateRef.current?.insertText(`{{${column + 1}}}`)}>{`{{${column + 1}}}`} {mode === 'excel' && header ? formatCell(rows[0]?.[column]) : `Baris ${column + 1}`}</Button>)}</div>
+          <div className="mt-4 flex flex-wrap gap-4 text-sm"><Button variant="link" size="sm" className="" onClick={() => setTemplate(makeTemplate(Math.min(columnCount, 3)))}>Template awal</Button><Button variant="link" size="sm" className="" onClick={saveTemplate}>Unduh desain JSON</Button><Button variant="link" size="sm" onClick={()=>templateFileRef.current?.click()}>Impor desain JSON</Button><Input ref={templateFileRef} className="hidden" type="file" aria-label="Muat template JSON" accept=".json,application/json" onChange={event => { void openTemplate(event.target.files?.[0]);event.target.value='' }} /></div>
+          <p className="hint" role="status">{templateMessage}</p>
+        </FieldGroup><Separator className="my-5" /></>}
+          <FieldGroup className="gap-4">
+            <FieldGroup className="grid grid-cols-2 gap-3">
+              <NumberField label="Ruang dalam (mm)" value={settings.padding} onChange={value => update('padding', value)} />
+              <Field className=""><FieldLabel htmlFor="label-setting-4">Huruf</FieldLabel><SelectInput id="label-setting-4" className="w-full" value={settings.font} onValueChange={value => update('font',value as LabelSettings['font'])} options={[{value:'sans',label:'Sans (Noto Sans)'},{value:'mono',label:'JetBrains Mono'}]} /></Field>
+              <Field className=" col-span-2"><FieldLabel htmlFor="label-setting-6">Posisi vertikal</FieldLabel><SelectInput id="label-setting-6" className="w-full" value={settings.vertical} onValueChange={value => update('vertical',value as LabelSettings['vertical'])} options={[{value:'top',label:'Atas'},{value:'center',label:'Tengah'},{value:'bottom',label:'Bawah'}]} /></Field>
+            </FieldGroup>
+            <FieldGroup className="mt-4 grid grid-cols-2 gap-3">
+              <NumberField label="Jarak baris" value={settings.lineHeight ?? 1.3} onChange={value => update('lineHeight', value)} min={1} max={3} step={0.1} />
+              <NumberField label="Geser X (mm)" value={settings.offsetX ?? 0} onChange={value => update('offsetX', value)} min={-1000} />
+              <NumberField label="Geser Y (mm)" value={settings.offsetY ?? 0} onChange={value => update('offsetY', value)} min={-1000} />
+            </FieldGroup>
+            <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
+            <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>
+          </FieldGroup>
+        </CardContent></Card>
       </div>
       <section className="min-w-0 xl:sticky xl:top-20" aria-labelledby="preview-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="preview-title">Pratinjau</h2><div className="flex flex-wrap gap-2"><Button  disabled={!canExport} onClick={() => { void exportPdf(false) }}><DownloadIcon />{exporting ? 'Menyiapkan…' : 'Unduh PDF'}</Button><Button variant="outline" size="sm" disabled={!canExport} onClick={() => { void exportPdf(true) }}><PrinterIcon />Cetak PDF</Button></div></div>

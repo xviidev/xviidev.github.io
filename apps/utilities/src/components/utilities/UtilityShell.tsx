@@ -35,7 +35,7 @@ export function UtilityShell() {
  useEffect(()=>{
   document.title = active ? `${active.title} — XVII Dev` : 'Utilitas — XVII Dev'
   document.querySelector('meta[name="description"]')?.setAttribute('content', active?.description ?? 'Alat sederhana untuk pekerjaan sehari-hari. Langsung di browser.')
-  document.querySelector('link[rel="canonical"]')?.setAttribute('href', `https://xvii.dev/utilitas/${active ? active.slug + '/' : ''}`)
+  document.querySelector('link[rel="canonical"]')?.setAttribute('href', `https://xvii.dev/utilities/${active ? active.slug + '/' : ''}`)
  },[active])
  const [searchOpen,setSearchOpen]=useState(false)
  const navigate=useNavigate()

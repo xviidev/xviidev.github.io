@@ -1,3 +1,4 @@
+import { $applyFontSize } from '../lib/editor-format'
 import { ToggleGroup, ToggleGroupItem } from '@xviidev/ui/components/toggle-group'
 import { Input } from '@xviidev/ui/components/input'
 import { BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon } from '@xviidev/ui/lib/icons'
@@ -11,7 +12,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getSelectionStyleValueForProperty, $patchStyleText } from '@lexical/selection'
 import { mergeRegister } from '@lexical/utils'
-import { $setSelection, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, SELECTION_CHANGE_COMMAND } from 'lexical'
+import { $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_LOW, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG } from 'lexical'
 import type { LexicalNode, RangeSelection } from 'lexical'
 import type { RichDocument, RichLine, RichRun, Weight } from '../lib/rich-text'
 
@@ -54,6 +55,9 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
   const [align, setAlign] = useState('left')
   const [size, setSize] = useState(String(fontSize))
   const editingSize = useRef(false)
+  const sizeSelection = useRef<RangeSelection | null>(null)
+  const sizeDraft = useRef(String(fontSize))
+  const lastValidSize = useRef(String(fontSize))
   useImperativeHandle(ref, () => ({ insertText(text) {
     editor.update(() => {
       let selection = $getSelection()
@@ -70,7 +74,7 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
       const node = selection.anchor.getNode(); const paragraph = $isElementNode(node) ? node : node.getParent()
       setAlign(paragraph?.getFormatType() || 'left')
       setBold(selection.hasFormat('bold') || $getSelectionStyleValueForProperty(selection, 'font-weight', '400') === '700'); setItalic(selection.hasFormat('italic'))
-      if (!editingSize.current) setSize($getSelectionStyleValueForProperty(selection, 'font-size', `${fontSize}pt`).replace('pt', ''))
+      if (!editingSize.current) { const value = $getSelectionStyleValueForProperty(selection, 'font-size', `${fontSize}pt`).replace('pt', ''); setSize(value); sizeDraft.current = value; if (value) lastValidSize.current = value }
     }
     return mergeRegister(
       editor.registerCommand(FORMAT_TEXT_COMMAND, format => {
@@ -86,24 +90,24 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
       editor.registerCommand(SELECTION_CHANGE_COMMAND, () => { update(); return false }, COMMAND_PRIORITY_LOW),
     )
   }, [editor, fontSize])
-  useEffect(() => { if (!editingSize.current) setSize(String(fontSize)) }, [fontSize])
-  function style(property: string, value: string | null) {
+  useEffect(() => { if (!editingSize.current) { setSize(String(fontSize)); sizeDraft.current = String(fontSize) } }, [fontSize])
+  function applySize(value: string, focus = false) {
+    const number = Number(value)
+    if (!value || !Number.isFinite(number) || number < 4 || number > 100) return false
     editor.update(() => {
-      let selection = $getSelection()
-      if (!$isRangeSelection(selection) && savedSelection.current) { selection = savedSelection.current.clone();$setSelection(selection) }
-      if ($isRangeSelection(selection)) {
-        if (property === 'font-weight' && selection.hasFormat('bold')) selection.formatText('bold')
-        if (property === 'font-weight' && value === '700') { selection.formatText('bold'); $patchStyleText(selection, { 'font-weight': null }) }
-        else $patchStyleText(selection, { [property]: value })
-      }
-    })
-    requestAnimationFrame(()=>editor.focus())
+      sizeSelection.current = $applyFontSize(number, sizeSelection.current ?? savedSelection.current)
+      savedSelection.current = sizeSelection.current?.clone() ?? null
+    }, { discrete: true, tag: SKIP_DOM_SELECTION_TAG })
+    lastValidSize.current = value
+    if (focus) editor.focus()
+    return true
   }
-  function commitSize() {
+  function commitSize(focus = false) {
+    if (!editingSize.current) return
+    if (!applySize(sizeDraft.current, focus)) {
+      sizeDraft.current = lastValidSize.current; setSize(lastValidSize.current)
+    }
     editingSize.current = false
-    const value = Number(size)
-    if (!Number.isFinite(value) || value < 4 || value > 100) { setSize(String(fontSize)); return }
-    style('font-size', `${value}pt`)
   }
   return <div className="rich-toolbar" role="toolbar" aria-label="Format teks">
     <ToggleGroup multiple size="icon-sm" spacing={1} aria-label="Gaya huruf" value={[...(bold ? ['bold'] : []), ...(italic ? ['italic'] : [])]} onValueChange={values => {
@@ -115,7 +119,15 @@ const Controls = forwardRef<RichTextHandle, { fontSize: number }>(function Contr
       <ToggleGroupItem value="italic" aria-label="Miring" title="Miring (Ctrl+I)" onMouseDown={event => event.preventDefault()}><ItalicIcon /></ToggleGroupItem>
     </ToggleGroup>
     <div className="mx-0.5 flex items-center gap-1 border-x border-border px-1">
-      <Input className="h-8 w-14 px-1 text-center" type="number" aria-label="Ukuran huruf" title="Ukuran huruf, 4–100 pt" min={4} max={100} step={0.5} value={size} onFocus={() => { editingSize.current = true }} onChange={event => setSize(event.target.value)} onBlur={commitSize} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur() } }} />
+      <Input className="h-8 w-14 px-1 text-center" type="number" aria-label="Ukuran huruf" title="Ukuran huruf, 4–100 pt" min={4} max={100} step={0.5} value={size} onFocus={() => {
+        editingSize.current = true
+        sizeSelection.current = savedSelection.current?.clone() ?? null
+      }} onChange={event => {
+        const value = event.target.value
+        sizeDraft.current = value; setSize(value); applySize(value)
+      }} onBlur={() => commitSize()} onKeyDown={event => {
+        if (event.key === 'Enter') { event.preventDefault(); commitSize(true) }
+      }} />
       <span className="text-sm text-muted-foreground">pt</span>
     </div>
     <ToggleGroup size="icon-sm" spacing={1} aria-label="Perataan paragraf" value={[align]} onValueChange={values => { const value = values[0]; if (value === 'left' || value === 'center' || value === 'right') editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value) }}>

@@ -1,5 +1,5 @@
 export const labelPrinter = {
- slug: 'label-printer',
+ slug: 'labels',
  title: 'Cetak label',
  description: 'Susun label dari Excel atau input manual, atur template, lalu unduh PDF siap cetak.',
  category: 'Dokumen',

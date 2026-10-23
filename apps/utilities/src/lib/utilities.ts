@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import { utilityMetadata } from './metadata'
 import { TagsIcon } from '@xviidev/ui/lib/icons'
 const implementations = {
- 'label-printer': { icon: TagsIcon, load:()=>import('@xviidev/label-printer') },
+ 'labels': { icon: TagsIcon, load:()=>import('@xviidev/label-printer') },
 } satisfies Record<(typeof utilityMetadata)[number]['slug'], { icon: typeof TagsIcon; load: () => Promise<{ default: ComponentType }> }>
 export const utilities = utilityMetadata.map(tool => ({ ...tool, ...implementations[tool.slug] }))
 export const categories = [...new Set(utilities.map(tool => tool.category))]

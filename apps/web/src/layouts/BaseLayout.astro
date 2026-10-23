@@ -34,7 +34,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         <nav aria-label="Navigasi utama" class="flex items-center gap-4 text-xs text-muted-foreground sm:gap-6">
           <a class="hover:text-foreground" href="/#tentang">Tentang</a>
           <a class="hover:text-foreground" href="/#proyek">Proyek</a>
-          <a class="hover:text-foreground aria-[current=page]:text-foreground" href="/utilitas/" aria-current={Astro.url.pathname.startsWith('/utilitas') ? 'page' : undefined}>Utilitas</a>
+          <a class="hover:text-foreground aria-[current=page]:text-foreground" href="/utilities/" aria-current={Astro.url.pathname.startsWith('/utilities') ? 'page' : undefined}>Utilitas</a>
         </nav>
       </header>
       <main id="main"><slot /></main>
