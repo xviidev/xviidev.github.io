@@ -1,3 +1,4 @@
+import type { LabelBarcode } from './label-barcode.ts'
 export const MAX_LABELS = 1000
 
 export interface LabelSettings {
@@ -21,6 +22,7 @@ export interface LabelSettings {
   offsetX?: number
   offsetY?: number
   lineHeight?: number
+  barcode?: LabelBarcode
 }
 
 export const DEFAULT_SETTINGS: LabelSettings = {

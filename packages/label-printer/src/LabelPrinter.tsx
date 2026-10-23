@@ -4,6 +4,8 @@ import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText, InputGrou
 import { applyPaperPreset, paperSettings } from './lib/presets'
 import { Separator } from '@xviidev/ui/components/separator'
 import { DocumentPresets } from './components/DocumentPresets'
+import { BarcodeDesign } from './components/BarcodeDesign'
+import { prepareLabelData } from './lib/label-data'
 import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon, FileTextIcon, CopyIcon, HashIcon, Rows3Icon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@xviidev/ui/components/empty'
 import { Skeleton } from '@xviidev/ui/components/skeleton'
@@ -21,7 +23,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { RichTextEditor } from './components/RichTextEditor'
 import type { RichTextHandle } from './components/RichTextEditor'
 import { CanvasSheet } from './components/CanvasSheet'
-import { DEFAULT_SETTINGS, expandLabels, formatCell, getLayout, paginateLabels } from './lib/labels'
+import { DEFAULT_SETTINGS, formatCell, getLayout, paginateLabels } from './lib/labels'
 import type { LabelSettings } from './lib/labels'
 import { documentText, fromText, makeTemplate, manualDocuments, resolveTemplate, templateErrors } from './lib/rich-text'
 import type { RichDocument } from './lib/rich-text'
@@ -73,24 +75,27 @@ export default function LabelPrinter() {
   const showTemplate = mode === 'excel' || applyTemplate
   const templateIssues = useMemo(() => showTemplate && (mode !== 'excel' || sheets.length) ? templateErrors(templateDoc, columnCount) : [], [showTemplate, mode, sheets.length, templateDoc, columnCount])
   const sourceLabels = useMemo(() => {
-    if (mode === 'manual') return applyTemplate ? rawManual.map(doc => resolveTemplate(templateDoc, doc.map(line => documentText([line])))).filter(doc => doc.length) : manualDocuments(manualDoc)
-    return rows.slice(header ? 1 : 0).map(row => resolveTemplate(templateDoc, row)).filter(doc => doc.length)
+    if (mode === 'manual') return rawManual.map((doc, index) => {
+      const values = doc.map(line => documentText([line]))
+      return { document: applyTemplate ? resolveTemplate(templateDoc, values) : manualDocuments(doc)[0] ?? [], values, source: `Label manual ${index + 1}` }
+    })
+    return rows.slice(header ? 1 : 0).map((row, index) => ({ document: resolveTemplate(templateDoc, row), values: row, source: `Baris Excel ${index + (header ? 2 : 1)}` }))
   }, [mode, applyTemplate, rawManual, manualDoc, templateDoc, rows, header])
   const labelResult = useMemo(() => {
-    try { return { labels: expandLabels(sourceLabels.map((_, i) => String(i)), copies).map(index => sourceLabels[Number(index)]), error: '' } }
-    catch (error) { return { labels: [] as RichDocument[], error: error instanceof Error ? error.message : 'Data tidak valid.' } }
-  }, [sourceLabels, copies])
+    try { return { ...prepareLabelData(sourceLabels, copies, settings.barcode), error: '' } }
+    catch (error) { return { labels: [] as RichDocument[], barcodeValues: [] as string[], errors: [] as string[], count: 0, error: error instanceof Error ? error.message : 'Data tidak valid.' } }
+  }, [sourceLabels, copies, settings.barcode])
   const layout = useMemo(() => getLayout(settings), [settings])
   const paperLayout = useMemo(() => getLayout({ ...DEFAULT_SETTINGS, ...paperSettings(settings), padding: 0 }), [settings])
   const startError = !Number.isInteger(start) || start < 1 || (layout.capacity > 0 && start > layout.capacity) ? 'Posisi awal harus berada dalam jumlah label per lembar.' : ''
-  const baseErrors = [...layout.errors, ...templateIssues, labelResult.error, startError, mode === 'excel' ? fileError : ''].filter(Boolean)
+  const baseErrors = [...layout.errors, ...templateIssues, ...labelResult.errors, labelResult.error, startError, mode === 'excel' ? fileError : ''].filter(Boolean)
   const texts = useMemo(() => labelResult.labels.map(documentText), [labelResult.labels])
   const pages = useMemo(() => paginateLabels(texts, layout.capacity, start), [texts, layout.capacity, start])
-  const job = useMemo(() => ({ documents: labelResult.labels, pages, settings, columns: layout.columns, valid: !baseErrors.length }), [labelResult.labels, pages, settings, layout.columns, baseErrors.join('|')])
+  const job = useMemo(() => ({ documents: labelResult.labels, barcodeValues: labelResult.barcodeValues, pages, settings, columns: layout.columns, valid: !baseErrors.length }), [labelResult.labels, labelResult.barcodeValues, pages, settings, layout.columns, baseErrors.join('|')])
   const [renderState, setRenderState] = useState<{ job: typeof job; model: PrintModel | null; fonts: Map<FontKey, LoadedFont>; error: string } | null>(null)
   const ready = renderState?.job === job
   const model = ready ? renderState.model : null
-  const errors = [...baseErrors, ready ? renderState.error : ''].filter(Boolean)
+  const errors = [...baseErrors, ...(model?.barcodeErrors ?? []), ready ? renderState.error : ''].filter(Boolean)
   const displayedPage = Math.max(0, Math.min(currentPage, pages.length - 1))
   const canExport = ready && model !== null && pages.length > 0 && errors.length === 0 && !model.overflow.length && !model.unsupported.length && !loading && !exporting
 
@@ -106,7 +111,7 @@ export default function LabelPrinter() {
     const timer = setTimeout(() => {
       if (!job.valid || !job.documents.length) { setRenderState({ job, model: null, fonts: new Map(), error: '' }); return }
       void loadFonts(job.documents, job.settings).then(fonts => {
-        if (!cancelled) setRenderState({ job, fonts, model: layoutPages(job.documents, job.pages, job.settings, job.columns, makeMeasure(fonts)), error: '' })
+        if (!cancelled) setRenderState({ job, fonts, model: layoutPages(job.documents, job.pages, job.settings, job.columns, makeMeasure(fonts), job.barcodeValues), error: '' })
       }).catch(error => { if (!cancelled) setRenderState({ job, model: null, fonts: new Map(), error: error instanceof Error ? error.message : 'Pratinjau gagal disiapkan.' }) })
     }, 150)
     return () => { cancelled = true; clearTimeout(timer) }
@@ -238,7 +243,7 @@ export default function LabelPrinter() {
            </TabsContent>
           </Tabs>
           {showTemplate && <p className="hint">Atur format baris dan pemetaan kolom di Desain label di bawah. {mode === 'excel' ? templateMessage : ''}</p>}
-          <div className="mt-5 grid grid-cols-2 gap-3"><NumberField unit="kali" icon={CopyIcon} label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField icon={HashIcon} label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{sourceLabels.length} data yang berisi teks · maksimal 1.000 label termasuk salinan.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3"><NumberField unit="kali" icon={CopyIcon} label="Salinan per label" value={copies} onChange={setCopies} min={1} max={100} step={1} /><NumberField icon={HashIcon} label="Mulai di label ke-" value={start} onChange={setStart} min={1} max={layout.capacity || 1} step={1} /></div><p className="hint">Posisi dihitung dari kiri ke kanan, lalu ke bawah. Gunakan posisi awal jika sebagian stiker sudah terpakai.</p><p className="hint">{labelResult.count} data label · maksimal 1.000 label termasuk salinan.</p>
         </FieldGroup></CardContent></Card>
         <Card size="sm" className="mt-4" aria-labelledby="design-title"><CardHeader><CardTitle id="design-title" role="heading" aria-level={2}><TypeIcon className="mr-2 inline size-4" />Desain label</CardTitle></CardHeader><CardContent>
           <p className="hint mb-4">Atur tebal, miring, ukuran huruf, dan perataan langsung di editor. Pengaturan di bawah berlaku untuk seluruh label dan tidak ikut disimpan dalam preset kertas.</p>
@@ -261,6 +266,8 @@ export default function LabelPrinter() {
             <Button variant="link" size="sm" className=" mt-3" onClick={() => setSettings(previous => ({ ...previous, offsetX: 0, offsetY: 0 }))}>Atur ulang posisi teks</Button>
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="print-border" checked={settings.border} onCheckedChange={checked => update('border', checked)} /><FieldLabel htmlFor="print-border">Cetak garis tepi label</FieldLabel></Field></FieldSet>
           </FieldGroup>
+          <Separator className="my-5" />
+          <BarcodeDesign settings={settings} mode={mode} columns={Array.from({ length: Math.min(columnCount, 100) }, (_, column) => ({ value: String(column), label: `${column + 1}. ${mode === 'excel' && header ? formatCell(rows[0]?.[column]) || `Kolom ${column + 1}` : `Baris ${column + 1}`}` }))} onChange={value => update('barcode', value)} />
         </CardContent></Card>
       </div>
       <section className="min-w-0 xl:sticky xl:top-20" aria-labelledby="preview-title">

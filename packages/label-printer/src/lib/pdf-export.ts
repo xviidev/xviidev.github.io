@@ -6,6 +6,7 @@ import { PT_PER_MM } from './print-layout.ts'
 import type { LabelSettings } from './labels.ts'
 
 export async function generatePdf(model: PrintModel, s: LabelSettings, loadBytes: (key: FontKey) => Promise<Uint8Array>): Promise<Uint8Array> {
+  if (model.barcodeErrors?.length) throw new Error(model.barcodeErrors.join(' '))
   if (model.overflow.length || model.unsupported.length) throw new Error('Perbaiki teks yang tidak muat atau karakter yang tidak didukung sebelum membuat PDF.')
   if (!model.pages.length) throw new Error('Tambahkan data label terlebih dahulu.')
   const pdf = await PDFDocument.create()
@@ -20,6 +21,11 @@ export async function generatePdf(model: PrintModel, s: LabelSettings, loadBytes
     const page = pdf.addPage([s.paperWidth * PT_PER_MM, height])
     for (const slot of slots) {
       if (s.border) page.drawRectangle({ x: slot.x, y: height - slot.y - s.labelHeight * PT_PER_MM, width: s.labelWidth * PT_PER_MM, height: s.labelHeight * PT_PER_MM, borderWidth: 0.5, borderColor: rgb(0, 0, 0) })
+      const barcode = slot.label.barcode
+      if (barcode) {
+        page.drawRectangle({ x: slot.x + barcode.x, y: height - slot.y - barcode.y - barcode.height, width: barcode.width, height: barcode.height, color: rgb(1, 1, 1) })
+        for (const bar of barcode.bars) page.drawRectangle({ x: slot.x + bar.x, y: height - slot.y - barcode.barY - barcode.barHeight, width: bar.width, height: barcode.barHeight, color: rgb(0, 0, 0) })
+      }
       for (const run of slot.label.runs) {
         const x = slot.x + run.x, y = height - slot.y - run.baseline
         page.drawText(run.text, { x, y, size: run.size, font: fonts.get(run.key)!, color: rgb(0, 0, 0) })

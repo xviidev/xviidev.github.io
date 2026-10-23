@@ -8,6 +8,7 @@ Monorepo untuk xvii.dev. Antarmuka tetap berbahasa Indonesia.
 - `apps/utilities`: aplikasi utilitas React + Vite + TanStack Router.
 - `packages/ui`: komponen shadcn/ui bersama, preset `b6RfRCplyq`, tema, dan token desain.
 - `packages/label-printer`: utilitas cetak label, Lexical, pratinjau Konva, impor Excel, dan ekspor PDF.
+- `packages/barcode`: pembuat Code 128 dan EAN-13, input satuan atau massal hingga 200 kode, serta ekspor PNG, SVG, dan PDF A4.
 
 Satu package untuk satu utilitas, bukan satu kategori. Kategori hanya metadata pada katalog. Utilitas baru menggunakan komponen dari `@xviidev/ui`, bukan menyalinnya.
 
@@ -25,6 +26,10 @@ npm run build
 ```
 
 Homepage: `/`; katalog: `/utilities/`; cetak label: `/utilities/labels/`.
+
+Pembuat barcode: `/utilities/barcode/`. EAN-13 menerima 12 digit dengan digit pemeriksa otomatis atau memvalidasi 13 digit lengkap. PNG dan SVG mengunduh kode yang ditampilkan; PDF memuat seluruh daftar sesuai urutan. Unduhan tersedia setelah semua baris valid. Data barcode diproses lokal dan tidak disimpan.
+
+Pada Cetak label, buka **Desain label → Barcode pada label → Tambah barcode**. Pilih Code 128 atau EAN-13 dan sumber dari nilai tetap, kolom Excel, atau baris manual. Posisi dan ukuran barcode memakai milimeter dan mencakup ruang kosong serta teks kode. Teks label menempati area di atas barcode dengan sela 1 mm; posisi atau isi yang tidak muat memblokir ekspor. Barcode digambar sebagai vektor pada PDF. Salinan dan posisi awal lembar mempertahankan pasangan teks dan kode. Desain JSON menyertakan konfigurasi serta nilai tetap barcode; preset kertas tetap hanya menyimpan geometri.
 
 Build menggabungkan `apps/web/dist` dan `apps/utilities/dist` ke `dist/` di root. `npm run preview` membuka hasil gabungan pada port 4325. GitHub Actions memvalidasi semua workspace dan menerbitkannya ke GitHub Pages dengan domain xvii.dev.
 

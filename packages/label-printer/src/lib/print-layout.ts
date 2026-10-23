@@ -1,12 +1,14 @@
 import type { LabelSettings, LabelSlot } from './labels.ts'
 import type { RichDocument, RichRun, Weight } from './rich-text.ts'
+import { placeBarcode } from './label-barcode.ts'
+import type { PlacedBarcode } from './label-barcode.ts'
 
 export const PT_PER_MM = 72 / 25.4
 export type FontKey = `${'sans' | 'mono'}:${Weight}:${'normal' | 'italic'}`
 export interface Metrics { width: number; ascent: number; descent: number; supported: boolean }
 export interface PlacedRun extends RichRun { x: number; baseline: number; size: number; key: FontKey; width: number }
-export interface LaidLabel { runs: PlacedRun[]; overflow: boolean; unsupported: boolean; height: number }
-export interface PrintModel { pages: { index: number; x: number; y: number; label: LaidLabel }[][]; overflow: number[]; unsupported: number[] }
+export interface LaidLabel { runs: PlacedRun[]; overflow: boolean; unsupported: boolean; height: number; barcode?: PlacedBarcode }
+export interface PrintModel { pages: { index: number; x: number; y: number; label: LaidLabel }[][]; overflow: number[]; unsupported: number[]; barcodeErrors?: string[] }
 export type Measure = (text: string, size: number, key: FontKey) => Metrics
 export const fontKey = (run: RichRun, settings: LabelSettings): FontKey => `${settings.font}:${run.weight ?? (settings.bold ? 700 : 400)}:${run.italic ? 'italic' : 'normal'}`
 
@@ -77,9 +79,23 @@ export function layoutLabel(doc: RichDocument, s: LabelSettings, measure: Measur
   return { runs, height: top, unsupported, overflow: tooWide || top > maxHeight + 0.01 || outside }
 }
 
-export function layoutPages(documents: RichDocument[], slots: (LabelSlot | null)[][], s: LabelSettings, columns: number, measure: Measure): PrintModel {
-  const labels = documents.map(document => layoutLabel(document, s, measure))
+export function layoutPages(documents: RichDocument[], slots: (LabelSlot | null)[][], s: LabelSettings, columns: number, measure: Measure, barcodeValues: string[] = []): PrintModel {
+  const barcodeErrors: string[] = []
+  const labels = documents.map((document, index) => {
+    if (!s.barcode?.enabled) return layoutLabel(document, s, measure)
+    try {
+      const barcode = placeBarcode(barcodeValues[index] ?? '', s.barcode, s, measure)
+      // Text alignment stays within the space above the barcode, with a 1 mm gap.
+      const label = layoutLabel(document, { ...s, labelHeight: s.barcode.y - 1 + s.padding }, measure)
+      if (barcode.text) label.runs.push(barcode.text)
+      return { ...label, barcode }
+    } catch (error) {
+      barcodeErrors.push(`Barcode label ${index + 1}: ${(error as Error).message}`)
+      return layoutLabel(document, s, measure)
+    }
+  })
   return {
+    barcodeErrors,
     pages: slots.map(page => page.flatMap((slot, index) => slot ? [{ index: slot.index,
       x: (s.marginLeft + (index % columns) * (s.labelWidth + s.gapX)) * PT_PER_MM,
       y: (s.marginTop + Math.floor(index / columns) * (s.labelHeight + s.gapY)) * PT_PER_MM,

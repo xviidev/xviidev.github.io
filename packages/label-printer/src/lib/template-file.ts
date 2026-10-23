@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, getLayout } from './labels.ts'
 import type { LabelSettings } from './labels.ts'
 import { isRichDocument } from './rich-text.ts'
+import { isLabelBarcode } from './label-barcode.ts'
 
 export function decodeTemplate(text: string) {
   const value = JSON.parse(text)
@@ -13,5 +14,9 @@ export function decodeTemplate(text: string) {
     Object.assign(settings, { [key]: incoming })
   }
   if (!['sans', 'mono'].includes(settings.font) || !['left', 'center', 'right'].includes(settings.align) || !['top', 'center', 'bottom'].includes(settings.vertical) || getLayout(settings).errors.length) throw new Error('Ukuran atau pilihan font pada template tidak valid.')
+  if (value.settings.barcode !== undefined) {
+    if (!isLabelBarcode(value.settings.barcode)) throw new Error('Pengaturan barcode pada desain tidak valid.')
+    settings.barcode = { ...value.settings.barcode }
+  }
   return { document: value.document, settings }
 }
