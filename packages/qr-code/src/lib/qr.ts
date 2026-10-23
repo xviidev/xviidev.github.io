@@ -80,7 +80,7 @@ export function svgCode(matrix: Matrix, options: Appearance) {
     const a = x + 4, b = y + 4
     if (options.shape === 'square') path += `M${a} ${b}h1v1h-1z`
     else if (finderModule(x, y, matrix.size) || alignmentCells.has(y * matrix.size + x)) continue
-    else if (options.shape === 'dots' && !matrix.protected?.[y * matrix.size + x]) shapes += `<circle cx="${a + 0.5}" cy="${b + 0.5}" r="0.41"/>`
+    else if (options.shape === 'dots') shapes += `<circle cx="${a + 0.5}" cy="${b + 0.5}" r="0.5"/>`
     else path += roundedModule(x, y)
   }
   // Smooth re-entrant corners too, where three dark modules surround a white corner.

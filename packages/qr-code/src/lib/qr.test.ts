@@ -82,3 +82,15 @@ test('rounded junctions soften both outer and re-entrant corners without filling
   assert(sample(14.5,14.5)>240,'white module center must remain white')
   assert(sample(13.5,13.5)<40,'dark module center must remain dark')
 })
+
+test('dot mode renders separate full circles even for protected consecutive modules',()=>{
+  const size=21,data=new Uint8Array(size*size),reserved=new Uint8Array(size*size)
+  for(const x of [9,10,11]){data[10*size+x]=1;reserved[10*size+x]=1}
+  for(const protectedBits of [undefined,reserved]) {
+    const rendered=new Resvg(svgCode({size,data,protected:protectedBits},{...DEFAULT_APPEARANCE,shape:'dots'}),{font:{loadSystemFonts:false}}).render()
+    const sample=(x:number,y:number)=>rendered.pixels[(Math.floor(y/29*rendered.height)*rendered.width+Math.floor(x/29*rendered.width))*4]
+    assert(sample(14.5,14.5)<40,'each circle center should be dark')
+    assert(sample(14,14.1)>240,'adjacent dots must not form a capsule')
+    assert(sample(14.03,14.03)>240,'circle corners must remain empty')
+  }
+})
