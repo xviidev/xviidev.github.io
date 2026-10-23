@@ -97,10 +97,11 @@ export function svgCode(matrix: Matrix, options: Appearance) {
     if (options.shape === 'dots') shapes += `<circle cx="${x + 3.5}" cy="${y + 3.5}" r="3.5"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="2.5" fill="${options.background}"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="1.5"/>`
     else shapes += `<rect x="${x}" y="${y}" width="7" height="7" rx="1.5"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="0.9" fill="${options.background}"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.65"/>`
   }
-  for (const [x, y] of alignmentCenters) {
-    const cx = x + 4.5, cy = y + 4.5
-    if (options.shape === 'dots') shapes += `<circle cx="${cx}" cy="${cy}" r="2.5"/><circle cx="${cx}" cy="${cy}" r="1.5" fill="${options.background}"/><circle cx="${cx}" cy="${cy}" r="0.5"/>`
-    else shapes += `<rect x="${cx - 2.5}" y="${cy - 2.5}" width="5" height="5" rx="1"/><rect x="${cx - 1.5}" y="${cy - 1.5}" width="3" height="3" rx="0.5" fill="${options.background}"/><rect x="${cx - 0.5}" y="${cy - 0.5}" width="1" height="1" rx="0.3"/>`
+  // Alignment targets keep their native 5×5 module grid instead of becoming a fourth eye.
+  for (const [x, y] of alignmentCenters) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    if (Math.abs(dx) !== 2 && Math.abs(dy) !== 2 && (dx !== 0 || dy !== 0)) continue
+    if (options.shape === 'dots') shapes += `<circle cx="${x + dx + 4.5}" cy="${y + dy + 4.5}" r="0.58"/>`
+    else shapes += `<rect x="${x + dx + 4}" y="${y + dy + 4}" width="1" height="1" rx="0.25"/>`
   }
   const box = matrix.size * options.logoScale / 100, position = (side - box) / 2, inset = box * 0.12
   const logo = options.logo ? `<rect x="${position}" y="${position}" width="${box}" height="${box}" fill="${options.background}"/><image href="${options.logo}" x="${position + inset}" y="${position + inset}" width="${box - inset * 2}" height="${box - inset * 2}" preserveAspectRatio="xMidYMid meet"/>` : ''

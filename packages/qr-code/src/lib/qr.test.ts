@@ -94,3 +94,19 @@ test('dot mode renders separate full circles even for protected consecutive modu
     assert(sample(14.03,14.03)>240,'circle corners must remain empty')
   }
 })
+
+test('interior alignment markers remain a subtle dotted square in both styled modes',()=>{
+  const size=25,data=new Uint8Array(size*size),reserved=new Uint8Array(size*size)
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++) {
+    reserved[(18+dy)*size+18+dx]=1
+    if(Math.abs(dx)===2||Math.abs(dy)===2||(dx===0&&dy===0))data[(18+dy)*size+18+dx]=1
+  }
+  for(const shape of ['dots','rounded'] as const) {
+    const rendered=new Resvg(svgCode({size,data,protected:reserved},{...DEFAULT_APPEARANCE,shape}),{font:{loadSystemFonts:false}}).render()
+    const sample=(x:number,y:number)=>rendered.pixels[(Math.floor(y/33*rendered.height)*rendered.width+Math.floor(x/33*rendered.width))*4]
+    assert(sample(20.5,20.5)<40,'corner dot must remain present')
+    assert(sample(22.5,22.5)<40,'center dot must remain present')
+    assert(sample(21,20.1)>240,'border dots must remain individually round')
+    assert(sample(21.5,21.5)>240,'inner white ring must remain clear')
+  }
+})
