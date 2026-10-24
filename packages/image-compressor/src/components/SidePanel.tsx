@@ -1,5 +1,4 @@
 import { Button } from '@xviidev/ui/components/button'
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@xviidev/ui/components/card'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@xviidev/ui/components/field'
 import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText } from '@xviidev/ui/components/input-group'
 import { SelectInput } from '@xviidev/ui/components/select-input'
@@ -8,16 +7,15 @@ import { Slider } from '@xviidev/ui/components/slider'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@xviidev/ui/components/accordion'
 import { ColorPicker } from '@xviidev/ui/components/color-picker'
 import { Alert, AlertDescription } from '@xviidev/ui/components/alert'
-import { DownloadIcon, ImageIcon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
-import { formatFileSize } from '@xviidev/ui/lib/file'
-import { FORMATS, outputName, proportionalSize, sizeChange } from '../lib/options'
+import { ImageIcon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
+import { FORMATS, proportionalSize } from '../lib/options'
 import type { Options, Format } from '../lib/options'
-import type { Result, Source } from '../lib/client'
+import type { Source } from '../lib/client'
 
-export function SidePanel({ side, source, options, setOptions, result, busy, error, cancel, retry }: {
-  side: 'A' | 'B'; source: Source; options: Options; setOptions: (options: Options) => void; result: Result | null; busy: boolean; error: string; cancel: () => void; retry: () => void
+export function SidePanel({ source, options, setOptions, busy, error, cancel, retry }: {
+  source: Source; options: Options; setOptions: (options: Options) => void; busy: boolean; error: string; cancel: () => void; retry: () => void
 }) {
-  const prefix = `image-${side.toLowerCase()}`, original = options.format === 'original'
+  const prefix = 'image-output', original = options.format === 'original'
   const losslessFormat = ['webp', 'avif', 'jxl'].includes(options.format)
   const hasQuality = ['jpeg', 'webp', 'avif', 'jxl'].includes(options.format)
   const rotated = options.rotate === 90 || options.rotate === 270
@@ -26,17 +24,10 @@ export function SidePanel({ side, source, options, setOptions, result, busy, err
     const width = rotated ? source.height : source.width, height = rotated ? source.width : source.height
     setOptions({ ...options, ...(options.lockRatio ? proportionalSize(value, axis, width, height) : { [axis]: value }) })
   }
-  function save() {
-    if (!result || busy) return
-    const url = URL.createObjectURL(result.blob), anchor = document.createElement('a')
-    anchor.href = url; anchor.download = outputName(source.file.name, options.format); anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 60000)
-  }
-  return <Card size="sm" className={side === 'A' ? 'min-w-0 xl:col-start-1 xl:row-start-1' : 'min-w-0 xl:col-start-3 xl:row-start-1'}>
-    <CardHeader><CardTitle role="heading" aria-level={2}>Sisi {side}</CardTitle><CardDescription>{original ? 'Berkas asli tanpa perubahan.' : 'Pengaturan kompresi sisi ini.'}</CardDescription></CardHeader>
-    <CardContent className="flex flex-col gap-4"><FieldGroup className="gap-5">
-      <Field><FieldLabel htmlFor={`${prefix}-format`}>Format</FieldLabel><SelectInput id={`${prefix}-format`} icon={ImageIcon} className="w-full" value={options.format} options={FORMATS} onValueChange={value => setOptions({ ...options, format: value as Format, effort: Math.min(options.effort, ['webp', 'png'].includes(value) ? 6 : 9) })} /></Field>
+  return <div className="flex min-w-0 flex-col gap-4"><FieldGroup className="gap-5">
+      <Field><FieldLabel htmlFor={`${prefix}-format`}>Format</FieldLabel><SelectInput id={`${prefix}-format`} icon={ImageIcon} className="w-full" value={options.format} options={FORMATS.filter(format => format.value !== 'original')} onValueChange={value => setOptions({ ...options, format: value as Format, effort: Math.min(options.effort, ['webp', 'png'].includes(value) ? 6 : 9) })} /></Field>
       {!original && <>
-        {hasQuality && <Field><FieldLabel id={`${prefix}-quality-label`} htmlFor={`${prefix}-quality`}>Kualitas · {options.quality}</FieldLabel><Slider id={`${prefix}-quality`} aria-labelledby={`${prefix}-quality-label`} value={[options.quality]} min={0} max={100} step={1} disabled={losslessFormat && options.lossless} onValueChange={value => update('quality', Array.isArray(value) ? value[0] : value)} /><FieldDescription>{losslessFormat && options.lossless ? 'Kualitas asli dipertahankan.' : 'Lebih rendah berarti lebih kecil, dengan lebih banyak detail yang hilang.'}</FieldDescription></Field>}
+        {hasQuality && <Field><FieldLabel id={`${prefix}-quality-label`} htmlFor={`${prefix}-quality`}>Kualitas · {options.quality}</FieldLabel><Slider id={`${prefix}-quality`} aria-labelledby={`${prefix}-quality-label`} value={[options.quality]} min={0} max={100} step={1} disabled={losslessFormat && options.lossless} onValueChange={value => update('quality', Array.isArray(value) ? value[0] : value)} /><FieldDescription>{losslessFormat && options.lossless ? 'Kualitas asli dipertahankan.' : 'Lebih tinggi untuk mempertahankan detail.'}</FieldDescription></Field>}
         {losslessFormat && <Field orientation="horizontal"><Checkbox id={`${prefix}-lossless`} checked={options.lossless} onCheckedChange={value => update('lossless', value)} /><FieldLabel htmlFor={`${prefix}-lossless`}>Lossless</FieldLabel></Field>}
         <Accordion>
           <AccordionItem value="resize"><AccordionTrigger>Ubah ukuran</AccordionTrigger><AccordionContent><FieldGroup className="gap-4">
@@ -70,11 +61,8 @@ export function SidePanel({ side, source, options, setOptions, result, busy, err
         </Accordion>
       </>}
     </FieldGroup>
-    <div className="flex flex-col gap-1 text-sm" role="status" aria-live="polite">{busy ? <p>Memproses sisi {side}…</p> : result ? <><p className="font-medium">{formatFileSize(result.blob.size)}</p><p className="text-muted-foreground">{sizeChange(source.file.size, result.blob.size)}</p><p className="text-muted-foreground">{result.width.toLocaleString('id-ID')} × {result.height.toLocaleString('id-ID')} px</p></> : <p className="text-muted-foreground">Hasil belum tersedia.</p>}</div>
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-    <Button disabled={!result || busy} onClick={save}><DownloadIcon data-icon="inline-start" />Unduh {side}</Button>
     {busy && <Button variant="outline" size="sm" onClick={cancel}>Batalkan</Button>}
     {error && <Button variant="outline" size="sm" onClick={retry}>Proses ulang</Button>}
-    </CardContent>
-  </Card>
+    </div>
 }
