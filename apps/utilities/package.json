@@ -13,10 +13,11 @@
     "preview": "vite preview --host 127.0.0.1 --port 4327"
   },
   "dependencies": {
-    "@xviidev/pdf-to-image": "*",
     "@tanstack/react-router": "^1.170.45",
     "@xviidev/barcode": "*",
     "@xviidev/label-printer": "*",
+    "@xviidev/image-compressor": "*",
+    "@xviidev/pdf-to-image": "*",
     "@xviidev/qr-code": "*",
     "@xviidev/ui": "*",
     "react": "^19.3.1",

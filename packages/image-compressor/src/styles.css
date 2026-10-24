@@ -1,0 +1,9 @@
+.image-comparison {
+  background-color: var(--background);
+  background-image: conic-gradient(var(--muted) 25%, transparent 0 50%, var(--muted) 0 75%, transparent 0);
+  background-size: 20px 20px;
+  cursor: grab;
+}
+.image-comparison:active { cursor: grabbing; }
+[data-image-comparison-card]:fullscreen { overflow: auto; background: var(--background); padding: 1rem; }
+[data-image-comparison-card]:fullscreen .image-comparison { height: 75vh; }

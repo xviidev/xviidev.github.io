@@ -10,6 +10,7 @@ Monorepo untuk xvii.dev. Antarmuka tetap berbahasa Indonesia.
 - `packages/label-printer`: utilitas cetak label, Lexical, pratinjau Konva, impor Excel, dan ekspor PDF.
 - `packages/barcode`: pembuat Code 128 dan EAN-13, input satuan atau massal hingga 200 kode, serta ekspor PNG, SVG, dan PDF A4.
 - `packages/pdf-to-image`: konversi halaman PDF ke PNG/JPG melalui PDF.js, dengan pratinjau, rentang halaman, dan unduh ZIP melalui fflate.
+- `packages/image-compressor`: pembanding dan kompresi gambar dua sisi dengan codec WebAssembly jSquash, resize, transformasi, dan pengurangan warna.
 
 Satu package untuk satu utilitas, bukan satu kategori. Kategori hanya metadata pada katalog. Utilitas baru menggunakan komponen dari `@xviidev/ui`, bukan menyalinnya.
 
@@ -27,6 +28,8 @@ npm run build
 ```
 
 Homepage: `/`; katalog: `/utilities/`; cetak label: `/utilities/labels/`.
+
+Kompres gambar: `/utilities/image-compressor/`. Dua sisi memiliki codec dan pengaturan masing-masing: gambar asli, MozJPEG, WebP, AVIF, OxiPNG, JPEG XL, atau QOI. Pembanding menampilkan hasil decode file kompresi, dengan geser pembatas, pan, zoom, dan layar penuh. Mendukung resize Lanczos/Triangle/Catmull-Rom/Mitchell/Nearest, kunci rasio, rotasi, flip, kuantisasi palet 2–256 warna, dithering, dan pengaturan codec. Gambar dapat dipilih, dijatuhkan, atau ditempel dari clipboard; maksimal 40 MB, 16 juta piksel, sisi 8192 px, atau 4 juta piksel untuk kuantisasi. Animasi menjadi satu gambar statis; hasil kompresi tidak membawa metadata sumber. JPEG meratakan transparansi ke warna latar pilihan. Codec diproses pada worker terpisah dan diunduh saat diperlukan, dengan WASM single-thread agar berfungsi di GitHub Pages tanpa header isolasi. Perubahan pengaturan membatalkan worker lama; unduhan hanya tersedia untuk hasil pengaturan terbaru. Lisensi codec disertakan sebagai aset build.
 
 PDF ke gambar: `/utilities/pdf-to-image/`. Pilih PDF hingga 100 MB, termasuk dokumen dengan kata sandi, lalu unduh halaman yang ditampilkan atau rentang halaman dalam ZIP. Kualitas Standar/Tajam/Sangat tajam memakai 150/200/300 DPI; DPI khusus 72–600 tersedia. Render dilakukan per halaman, maksimal 24 juta piksel dan sisi 8192 px; ZIP dibatasi 256 MB. PNG/JPG memakai latar putih. File, worker, font, CMap, dan decoder PDF diproses/disajikan dari situs sendiri, tanpa layanan konversi atau CDN. File pendukung PDF.js disalin melalui konfigurasi Vite agar tersedia pada mode pengembangan dan GitHub Pages.
 
