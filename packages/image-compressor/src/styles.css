@@ -7,3 +7,6 @@
 .image-comparison:active { cursor: grabbing; }
 [data-image-comparison-card]:fullscreen { overflow: auto; background: var(--background); padding: 1rem; }
 [data-image-comparison-card]:fullscreen .image-comparison { height: 75vh; }
+
+.image-comparison[data-background="light"] { background-image: none; background-color: var(--canvas-light); }
+.image-comparison[data-background="dark"] { background-image: none; background-color: var(--canvas-dark); }

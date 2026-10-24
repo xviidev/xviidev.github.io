@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { defaults, outputSize, proportionalSize, validateDimensions, validateRasterHeader, outputName, sizeChange } from './options.ts'
+import { defaults, resizePercent, previewGeometry, rotatedOptions, outputSize, proportionalSize, validateDimensions, validateRasterHeader, outputName, sizeChange } from './options.ts'
 
 test('rotation swaps geometry and resize validates actual output dimensions', () => {
   assert.deepEqual(outputSize(300, 200, { ...defaults('webp'), rotate: 90 }), { width: 200, height: 300 })
@@ -33,4 +33,32 @@ test('PNG and QOI dimensions are bounded before codec allocation', () => {
   assert.throws(() => validateRasterHeader(buffer))
   view.setUint32(16, 320); view.setUint32(20, 240); assert.doesNotThrow(() => validateRasterHeader(buffer))
   view.setUint32(0, 0x716f6966); view.setUint32(4, 8193); view.setUint32(8, 1); assert.throws(() => validateRasterHeader(buffer))
+})
+
+test('percentage presets use oriented source dimensions and rotation preserves selected resize scale', () => {
+  assert.deepEqual(resizePercent(320, 240, 0, 50), { width: 160, height: 120 })
+  assert.deepEqual(resizePercent(320, 240, 90, 50), { width: 120, height: 160 })
+  assert.deepEqual(resizePercent(3, 1, 0, 25), { width: 1, height: 1 })
+  assert.throws(() => resizePercent(8192, 1, 0, 200))
+  assert.throws(() => resizePercent(4000, 3000, 0, 150))
+  const half = { ...defaults('png', 160, 120), resize: true }
+  const rotated = rotatedOptions(half, 90)
+  assert.deepEqual(outputSize(320, 240, rotated), { width: 120, height: 160 })
+  assert.deepEqual(rotatedOptions(rotated, 0), half)
+  assert.deepEqual(outputSize(320, 240, rotatedOptions(rotated, 270)), { width: 120, height: 160 })
+})
+test('comparison frame retains source resolution and matches both sides even for distorted aspect ratios', () => {
+  for (const rotate of [0, 90, 180, 270] as const) {
+    const size = resizePercent(320, 240, rotate, 25), options = { ...defaults('png'), ...size, rotate, resize: true }
+    const frame = previewGeometry(320, 240, options)
+    assert.equal(Math.max(frame.width, frame.height), 320)
+    assert.equal(frame.width / frame.height, size.width / size.height)
+    const swapped = rotate === 90 || rotate === 270
+    assert.equal(frame.width, swapped ? frame.sourceHeight : frame.sourceWidth)
+    assert.equal(frame.height, swapped ? frame.sourceWidth : frame.sourceHeight)
+    assert.deepEqual(outputSize(320, 240, options), size)
+  }
+  const square = previewGeometry(320, 240, { ...defaults('png'), resize: true, width: 100, height: 100 })
+  assert.equal(square.width, square.height)
+  assert.equal(square.width, 320)
 })

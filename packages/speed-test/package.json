@@ -1,0 +1,22 @@
+{
+  "name": "@xviidev/speed-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.tsx",
+    "./metadata": "./src/metadata.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test src/lib/model.test.ts"
+  },
+  "dependencies": {
+    "@cloudflare/speedtest": "1.15.0",
+    "@xviidev/ui": "*",
+    "react": "^19.3.1"
+  }
+}

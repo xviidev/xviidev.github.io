@@ -26,6 +26,7 @@ for (const asset of ['cmaps/Adobe-Japan1-UCS2.bcmap', 'standard_fonts/Liberation
 }
 assert((await readdir(resolve(output, 'utilities/assets'))).some(name => /^pdf\.worker\.min-.*\.mjs$/.test(name)), 'Missing PDF.js worker')
 const utilityAssets = await readdir(resolve(output, 'utilities/assets'))
+assert(utilityAssets.some(name => /^pdf-tools\.worker-.*\.js$/.test(name)), 'Missing merge/split PDF worker')
 for (const codec of ['mozjpeg_enc', 'webp_enc', 'avif_enc', 'jxl_enc', 'jxl_dec', 'qoi_enc', 'qoi_dec', 'squoosh_oxipng_bg', 'squoosh_resize_bg']) {
   assert(utilityAssets.some(name => name.startsWith(`${codec}-`) && name.endsWith('.wasm')), `Missing image codec: ${codec}`)
 }

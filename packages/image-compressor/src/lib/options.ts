@@ -69,3 +69,27 @@ export function sizeChange(original: number, result: number) {
   const difference = (1 - result / original) * 100
   return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(Math.abs(difference))}% ${difference >= 0 ? 'lebih kecil' : 'lebih besar'}`
 }
+export function resizePercent(width: number, height: number, rotate: Options['rotate'], percent: number) {
+  if (!Number.isFinite(percent) || percent <= 0) throw new Error('Persentase resize harus lebih dari 0.')
+  const swap = rotate === 90 || rotate === 270
+  const size = { width: Math.max(1, Math.round((swap ? height : width) * percent / 100)), height: Math.max(1, Math.round((swap ? width : height) * percent / 100)) }
+  validateDimensions(size.width, size.height)
+  return size
+}
+
+/** Use the source resolution as the comparison scale, with the output aspect ratio. */
+export function previewGeometry(width: number, height: number, options: Options) {
+  const swap = options.rotate === 90 || options.rotate === 270
+  const oriented = { width: swap ? height : width, height: swap ? width : height }
+  let frame = oriented
+  if (options.resize && Number.isFinite(options.width) && Number.isFinite(options.height) && options.width > 0 && options.height > 0) {
+    const longest = Math.max(width, height), ratio = options.width / options.height
+    frame = ratio >= 1 ? { width: longest, height: longest / ratio } : { width: longest * ratio, height: longest }
+  }
+  return { ...frame, sourceWidth: swap ? frame.height : frame.width, sourceHeight: swap ? frame.width : frame.height }
+}
+
+export function rotatedOptions(options: Options, rotate: Options['rotate']): Options {
+  const wasSwapped = options.rotate === 90 || options.rotate === 270, swapped = rotate === 90 || rotate === 270
+  return { ...options, rotate, ...(wasSwapped !== swapped ? { width: options.height, height: options.width } : {}) }
+}

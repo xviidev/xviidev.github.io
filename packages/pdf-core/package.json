@@ -1,0 +1,23 @@
+{
+  "name": "@xviidev/pdf-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test src/core.test.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./options": "./src/options.ts",
+    "./preview": "./src/PdfPreview.tsx"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "pdf-lib": "^1.17.1",
+    "fflate": "^0.8.3",
+    "@xviidev/ui": "*",
+    "pdfjs-dist": "^6.4.299"
+  }
+}

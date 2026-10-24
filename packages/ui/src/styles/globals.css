@@ -7,6 +7,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+    --canvas-light: oklch(1 0 0);
+    --canvas-dark: oklch(0.145 0 0);
+    --comparison-handle: oklch(0.145 0 0);
+    --comparison-handle-active: oklch(0.3 0 0);
+    --comparison-handle-foreground: oklch(1 0 0);
     --ui-font-heading: 'Space Grotesk Variable', sans-serif;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);

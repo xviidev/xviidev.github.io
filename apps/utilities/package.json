@@ -21,7 +21,10 @@
     "@xviidev/qr-code": "*",
     "@xviidev/ui": "*",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "@xviidev/pdf-merge": "*",
+    "@xviidev/pdf-split": "*",
+    "@xviidev/speed-test": "*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

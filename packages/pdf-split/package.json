@@ -1,0 +1,18 @@
+{
+  "name": "@xviidev/pdf-split",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.tsx",
+    "./metadata": "./src/metadata.ts"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "@xviidev/ui": "*",
+    "@xviidev/pdf-core": "*"
+  }
+}

@@ -12,6 +12,7 @@ export interface FileUploadProps {
   maxSize?: number
   file?: { name: string; size: number } | null
   onFileSelect: (file: File) => void | Promise<void>
+  onFilesSelect?: (files: File[]) => void | Promise<void>
   onClear?: () => void
   label?: string
   hint?: string
@@ -26,8 +27,8 @@ export interface FileUploadProps {
   'aria-describedby'?: string
 }
 
-/** Single-file picker with a keyboard trigger and the same validation for drops. */
-export function FileUpload({ id, accept, maxSize, file, onFileSelect, onClear, label = 'Pilih file', hint, icon: Icon = UploadIcon, preview, busy = false, status, disabled = false, className, compact = false, fileDescription, 'aria-describedby': describedBy }: FileUploadProps) {
+/** File picker with a keyboard trigger and the same validation for drops. */
+export function FileUpload({ id, accept, maxSize, file, onFileSelect, onFilesSelect, onClear, label = 'Pilih file', hint, icon: Icon = UploadIcon, preview, busy = false, status, disabled = false, className, compact = false, fileDescription, 'aria-describedby': describedBy }: FileUploadProps) {
   const generatedId = useId(), controlId = id ?? generatedId
   const input = useRef<HTMLInputElement>(null), dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false), [error, setError] = useState('')
@@ -35,16 +36,16 @@ export function FileUpload({ id, accept, maxSize, file, onFileSelect, onClear, l
   const condensed = compact && !!file
   function select(files: FileList | null) {
     if (unavailable || !files?.length) return
-    if (files.length !== 1) { setError('Pilih satu file setiap kali mengunggah.'); return }
-    const file = files[0], issue = validateFile(file, accept, maxSize)
+    if (!onFilesSelect && files.length !== 1) { setError('Pilih satu file setiap kali mengunggah.'); return }
+    const selected = Array.from(files), issue = selected.map(file => validateFile(file, accept, maxSize)).find(Boolean) || ''
     setError(issue)
     if (!issue) {
-      try { void Promise.resolve(onFileSelect(file)).catch(() => setError('File gagal dibuka. Coba kembali.')) }
+      try { void Promise.resolve(onFilesSelect ? onFilesSelect(selected) : onFileSelect(selected[0])).catch(() => setError('File gagal dibuka. Coba kembali.')) }
       catch { setError('File gagal dibuka. Coba kembali.') }
     }
   }
   return <div data-slot="file-upload" aria-busy={busy} className={cn('flex min-w-0 flex-col gap-3', className)}>
-    <input ref={input} id={`${controlId}-input`} type="file" hidden accept={accept} disabled={unavailable} aria-label={label} onChange={event => { select(event.target.files); event.target.value = '' }} />
+    <input ref={input} id={`${controlId}-input`} type="file" hidden multiple={!!onFilesSelect} accept={accept} disabled={unavailable} aria-label={label} onChange={event => { select(event.target.files); event.target.value = '' }} />
     <div data-dragging={dragging || undefined} data-disabled={disabled || undefined} className={cn('flex min-w-0 gap-3 border border-border transition-colors data-[dragging=true]:border-ring data-[dragging=true]:bg-muted data-[disabled=true]:opacity-50', condensed ? 'flex-row flex-wrap items-center p-3' : 'flex-col border-dashed p-4')}
       onDragEnter={event => { if (event.dataTransfer.types.includes('Files')) { event.preventDefault(); dragDepth.current++; if (!unavailable) setDragging(true) } }}
       onDragOver={event => { if (event.dataTransfer.types.includes('Files')) { event.preventDefault(); event.dataTransfer.dropEffect = unavailable ? 'none' : 'copy' } }}

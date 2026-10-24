@@ -7,8 +7,8 @@ import { Slider } from '@xviidev/ui/components/slider'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@xviidev/ui/components/accordion'
 import { ColorPicker } from '@xviidev/ui/components/color-picker'
 import { Alert, AlertDescription } from '@xviidev/ui/components/alert'
-import { ImageIcon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
-import { FORMATS, proportionalSize } from '../lib/options'
+import { ImageIcon, MoveHorizontalIcon, MoveVerticalIcon, SlidersHorizontalIcon, RotateCwIcon, PaletteIcon, PercentIcon } from '@xviidev/ui/lib/icons'
+import { FORMATS, proportionalSize, resizePercent, rotatedOptions } from '../lib/options'
 import type { Options, Format } from '../lib/options'
 import type { Source } from '../lib/client'
 
@@ -18,6 +18,11 @@ export function SidePanel({ source, options, setOptions, busy, error, cancel, re
   const prefix = 'image-output', original = options.format === 'original'
   const losslessFormat = ['webp', 'avif', 'jxl'].includes(options.format)
   const hasQuality = ['jpeg', 'webp', 'avif', 'jxl'].includes(options.format)
+  const presets = [25, 50, 75, 100, 150, 200].map(percent => {
+    try { return { value: String(percent), label: `${percent}%`, size: resizePercent(source.width, source.height, options.rotate, percent), disabled: false } }
+    catch { return { value: String(percent), label: `${percent}%`, size: null, disabled: true } }
+  })
+  const preset = presets.find(item => item.size?.width === options.width && item.size?.height === options.height)?.value ?? 'custom'
   const rotated = options.rotate === 90 || options.rotate === 270
   function update<K extends keyof Options>(key: K, value: Options[K]) { setOptions({ ...options, [key]: value }) }
   function dimension(axis: 'width' | 'height', value: number) {
@@ -33,28 +38,29 @@ export function SidePanel({ source, options, setOptions, busy, error, cancel, re
           <AccordionItem value="resize"><AccordionTrigger>Ubah ukuran</AccordionTrigger><AccordionContent><FieldGroup className="gap-4">
             <Field orientation="horizontal"><Checkbox id={`${prefix}-resize`} checked={options.resize} onCheckedChange={value => update('resize', value)} /><FieldLabel htmlFor={`${prefix}-resize`}>Aktifkan resize</FieldLabel></Field>
             {options.resize && <>
+              <Field><FieldLabel htmlFor={`${prefix}-resize-preset`}>Skala dari ukuran asli</FieldLabel><SelectInput id={`${prefix}-resize-preset`} icon={PercentIcon} className="w-full" value={preset} options={[{ value: 'custom', label: 'Kustom' }, ...presets]} onValueChange={value => { const size = presets.find(item => item.value === value)?.size; if (size) setOptions({ ...options, ...size }) }} /><FieldDescription>Persentase mengikuti ukuran asli setelah rotasi.</FieldDescription></Field>
               <FieldGroup className="grid grid-cols-2 gap-3">{(['width', 'height'] as const).map(axis => <Field key={axis}><FieldLabel htmlFor={`${prefix}-${axis}`}>{axis === 'width' ? 'Lebar' : 'Tinggi'}</FieldLabel><InputGroup><InputGroupAddon>{axis === 'width' ? <MoveHorizontalIcon aria-hidden="true" /> : <MoveVerticalIcon aria-hidden="true" />}</InputGroupAddon><InputGroupInput id={`${prefix}-${axis}`} type="number" min={1} max={8192} value={options[axis] || ''} onChange={event => dimension(axis, Number(event.target.value))} /><InputGroupAddon align="inline-end"><InputGroupText>px</InputGroupText></InputGroupAddon></InputGroup></Field>)}</FieldGroup>
               <Field orientation="horizontal"><Checkbox id={`${prefix}-ratio`} checked={options.lockRatio} onCheckedChange={value => update('lockRatio', value)} /><FieldLabel htmlFor={`${prefix}-ratio`}>Kunci rasio</FieldLabel></Field>
-              <Field><FieldLabel htmlFor={`${prefix}-method`}>Metode resize</FieldLabel><SelectInput id={`${prefix}-method`} className="w-full" value={options.method} onValueChange={value => update('method', value as Options['method'])} options={[{ value: 'lanczos3', label: 'Lanczos 3' }, { value: 'mitchell', label: 'Mitchell' }, { value: 'catrom', label: 'Catmull-Rom' }, { value: 'triangle', label: 'Triangle' }, { value: 'nearest', label: 'Nearest neighbor' }]} /></Field>
+              <Field><FieldLabel htmlFor={`${prefix}-method`}>Metode resize</FieldLabel><SelectInput id={`${prefix}-method`} icon={SlidersHorizontalIcon} className="w-full" value={options.method} onValueChange={value => update('method', value as Options['method'])} options={[{ value: 'lanczos3', label: 'Lanczos 3' }, { value: 'mitchell', label: 'Mitchell' }, { value: 'catrom', label: 'Catmull-Rom' }, { value: 'triangle', label: 'Triangle' }, { value: 'nearest', label: 'Nearest neighbor' }]} /></Field>
               <Field orientation="horizontal"><Checkbox id={`${prefix}-linear`} checked={options.linearRGB} onCheckedChange={value => update('linearRGB', value)} /><FieldLabel htmlFor={`${prefix}-linear`}>Linear RGB</FieldLabel></Field>
               <Field orientation="horizontal"><Checkbox id={`${prefix}-alpha`} checked={options.premultiply} onCheckedChange={value => update('premultiply', value)} /><FieldLabel htmlFor={`${prefix}-alpha`}>Premultiply alpha</FieldLabel></Field>
             </>}
           </FieldGroup></AccordionContent></AccordionItem>
           <AccordionItem value="transform"><AccordionTrigger>Putar &amp; balik</AccordionTrigger><AccordionContent><FieldGroup className="gap-4">
-            <Field><FieldLabel htmlFor={`${prefix}-rotate`}>Rotasi</FieldLabel><SelectInput id={`${prefix}-rotate`} className="w-full" value={String(options.rotate)} onValueChange={value => { const rotate = Number(value) as Options['rotate']; const swap = rotate === 90 || rotate === 270; setOptions({ ...options, rotate, ...(options.lockRatio ? { width: swap ? source.height : source.width, height: swap ? source.width : source.height } : {}) }) }} options={[0, 90, 180, 270].map(value => ({ value: String(value), label: `${value}°` }))} /></Field>
+            <Field><FieldLabel htmlFor={`${prefix}-rotate`}>Rotasi</FieldLabel><SelectInput id={`${prefix}-rotate`} icon={RotateCwIcon} className="w-full" value={String(options.rotate)} onValueChange={value => setOptions(rotatedOptions(options, Number(value) as Options['rotate']))} options={[0, 90, 180, 270].map(value => ({ value: String(value), label: `${value}°` }))} /></Field>
             <Field orientation="horizontal"><Checkbox id={`${prefix}-flip-x`} checked={options.flipX} onCheckedChange={value => update('flipX', value)} /><FieldLabel htmlFor={`${prefix}-flip-x`}>Balik horizontal</FieldLabel></Field>
             <Field orientation="horizontal"><Checkbox id={`${prefix}-flip-y`} checked={options.flipY} onCheckedChange={value => update('flipY', value)} /><FieldLabel htmlFor={`${prefix}-flip-y`}>Balik vertikal</FieldLabel></Field>
           </FieldGroup></AccordionContent></AccordionItem>
           <AccordionItem value="palette"><AccordionTrigger>Kurangi warna</AccordionTrigger><AccordionContent><FieldGroup className="gap-4">
             <Field orientation="horizontal"><Checkbox id={`${prefix}-quantize`} checked={options.quantize} onCheckedChange={value => update('quantize', value)} /><FieldLabel htmlFor={`${prefix}-quantize`}>Aktifkan palet warna</FieldLabel></Field>
-            {options.quantize && <><Field><FieldLabel htmlFor={`${prefix}-colors`}>Jumlah warna</FieldLabel><InputGroup><InputGroupInput id={`${prefix}-colors`} type="number" min={2} max={256} value={options.colors} onChange={event => update('colors', Number(event.target.value))} /></InputGroup></Field><Field orientation="horizontal"><Checkbox id={`${prefix}-dither`} checked={options.dither} onCheckedChange={value => update('dither', value)} /><FieldLabel htmlFor={`${prefix}-dither`}>Dithering</FieldLabel></Field></>}
+            {options.quantize && <><Field><FieldLabel htmlFor={`${prefix}-colors`}>Jumlah warna</FieldLabel><InputGroup><InputGroupAddon><PaletteIcon aria-hidden="true" /></InputGroupAddon><InputGroupInput id={`${prefix}-colors`} type="number" min={2} max={256} value={options.colors} onChange={event => update('colors', Number(event.target.value))} /></InputGroup></Field><Field orientation="horizontal"><Checkbox id={`${prefix}-dither`} checked={options.dither} onCheckedChange={value => update('dither', value)} /><FieldLabel htmlFor={`${prefix}-dither`}>Dithering</FieldLabel></Field></>}
             <FieldDescription>Pengurangan warna mengubah piksel, termasuk saat codec memakai mode lossless.</FieldDescription>
           </FieldGroup></AccordionContent></AccordionItem>
           <AccordionItem value="advanced"><AccordionTrigger>Pengaturan codec</AccordionTrigger><AccordionContent><FieldGroup className="gap-4">
             {['png', 'webp', 'avif', 'jxl'].includes(options.format) && <Field><FieldLabel id={`${prefix}-effort-label`}>Upaya kompresi · {options.effort}</FieldLabel><Slider aria-labelledby={`${prefix}-effort-label`} value={[options.effort]} min={1} max={options.format === 'jxl' ? 9 : ['png', 'webp'].includes(options.format) ? 6 : 9} step={1} onValueChange={value => update('effort', Array.isArray(value) ? value[0] : value)} /><FieldDescription>Lebih tinggi dapat memperkecil hasil, tetapi lebih lambat.</FieldDescription></Field>}
             {['jpeg', 'jxl'].includes(options.format) && <Field orientation="horizontal"><Checkbox id={`${prefix}-progressive`} checked={options.progressive} onCheckedChange={value => update('progressive', value)} /><FieldLabel htmlFor={`${prefix}-progressive`}>Progressive</FieldLabel></Field>}
             {options.format === 'webp' && <Field orientation="horizontal"><Checkbox id={`${prefix}-sharp`} checked={options.sharpYuv} onCheckedChange={value => update('sharpYuv', value)} /><FieldLabel htmlFor={`${prefix}-sharp`}>Sharp YUV</FieldLabel></Field>}
-            {['jpeg', 'avif'].includes(options.format) && <Field><FieldLabel htmlFor={`${prefix}-subsample`}>Chroma subsampling</FieldLabel><SelectInput id={`${prefix}-subsample`} className="w-full" value={options.subsample} onValueChange={value => update('subsample', value as Options['subsample'])} options={[{ value: '420', label: '4:2:0 · lebih kecil' }, { value: '444', label: '4:4:4 · detail warna' }]} /></Field>}
+            {['jpeg', 'avif'].includes(options.format) && <Field><FieldLabel htmlFor={`${prefix}-subsample`}>Chroma subsampling</FieldLabel><SelectInput id={`${prefix}-subsample`} icon={PaletteIcon} className="w-full" value={options.subsample} onValueChange={value => update('subsample', value as Options['subsample'])} options={[{ value: '420', label: '4:2:0 · lebih kecil' }, { value: '444', label: '4:4:4 · detail warna' }]} /></Field>}
             {options.format === 'jpeg' && <Field><FieldLabel htmlFor={`${prefix}-background`}>Latar transparansi</FieldLabel><ColorPicker id={`${prefix}-background`} value={options.background} label="Latar transparansi" onValueChange={value => update('background', value)} /></Field>}
             {options.format === 'qoi' && <FieldDescription>QOI mempertahankan piksel tanpa pengaturan kualitas.</FieldDescription>}
           </FieldGroup></AccordionContent></AccordionItem>

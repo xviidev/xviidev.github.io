@@ -6,3 +6,8 @@ export { KeyRoundIcon, ImageIcon, ListOrderedIcon, ScanLineIcon } from 'lucide-r
 export { UploadIcon, LoaderCircleIcon } from 'lucide-react'
 export { ZoomInIcon, ZoomOutIcon, MaximizeIcon, RotateCwIcon, FlipHorizontalIcon, FlipVerticalIcon, ArrowLeftRightIcon, LockKeyholeIcon } from 'lucide-react'
 export { MinimizeIcon } from 'lucide-react'
+export { FilesIcon, ScissorsIcon, ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
+export { ChevronLeftIcon } from 'lucide-react'
+export { SquareDashedIcon, WavesIcon, FocusIcon } from 'lucide-react'
+export { PercentIcon } from 'lucide-react'
+export { GaugeIcon, ActivityIcon, PlayIcon, SquareIcon, ClockIcon } from 'lucide-react'
