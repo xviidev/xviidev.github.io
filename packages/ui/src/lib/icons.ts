@@ -1,3 +1,6 @@
 export { QrCodeIcon, WifiIcon, MessageCircleIcon, EyeIcon, EyeOffIcon, LinkIcon, PaletteIcon, MoveHorizontalIcon, MoveVerticalIcon, PanelTopIcon, PanelBottomIcon, PanelLeftIcon, PanelRightIcon, RectangleHorizontalIcon, HashIcon, Rows3Icon, SaveIcon, CopyIcon, PlusIcon, Trash2Icon, FileTextIcon, InfoIcon, RulerIcon, CheckIcon, ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, SearchIcon, XIcon, SunIcon, MoonIcon, TagsIcon, LayoutGridIcon, ShieldCheckIcon, CodeIcon, ChevronRightIcon, BoldIcon, ItalicIcon, UnderlineIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, Undo2Icon, Redo2Icon, DownloadIcon, PrinterIcon, FileSpreadsheetIcon, TypeIcon, SlidersHorizontalIcon } from 'lucide-react'
 export { BarcodeIcon } from 'lucide-react'
 export { ChevronDownIcon } from 'lucide-react'
+export { FileImageIcon } from 'lucide-react'
+export { KeyRoundIcon, ImageIcon, ListOrderedIcon, ScanLineIcon } from 'lucide-react'
+export { UploadIcon, LoaderCircleIcon } from 'lucide-react'

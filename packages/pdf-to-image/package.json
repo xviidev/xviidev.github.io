@@ -1,0 +1,23 @@
+{
+  "name": "@xviidev/pdf-to-image",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test src/lib/options.test.ts src/lib/archive.test.ts"
+  },
+  "exports": {
+    ".": "./src/index.tsx",
+    "./metadata": "./src/metadata.ts"
+  },
+  "dependencies": {
+    "@xviidev/ui": "*",
+    "fflate": "^0.8.3",
+    "pdfjs-dist": "^6.4.299",
+    "react": "^19.3.1"
+  }
+}

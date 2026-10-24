@@ -1,3 +1,4 @@
+import { FileUpload } from '@xviidev/ui/components/file-upload'
 import { MeasurementHelp, measurementIcons } from './components/MeasurementHelp'
 import type { MeasurementKind } from './components/MeasurementHelp'
 import { InputGroup, InputGroupInput, InputGroupAddon, InputGroupText, InputGroupTextarea } from '@xviidev/ui/components/input-group'
@@ -6,7 +7,7 @@ import { Separator } from '@xviidev/ui/components/separator'
 import { DocumentPresets } from './components/DocumentPresets'
 import { barcodeExpression } from './lib/barcode-template'
 import { prepareLabelData } from './lib/label-data'
-import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon, FileTextIcon, CopyIcon, HashIcon, Rows3Icon, MoveHorizontalIcon, MoveVerticalIcon } from '@xviidev/ui/lib/icons'
+import { RulerIcon, TypeIcon, InfoIcon, DownloadIcon, PrinterIcon, FileTextIcon, CopyIcon, HashIcon, Rows3Icon, MoveHorizontalIcon, MoveVerticalIcon, FileSpreadsheetIcon } from '@xviidev/ui/lib/icons'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@xviidev/ui/components/empty'
 import { Skeleton } from '@xviidev/ui/components/skeleton'
 import { Checkbox } from '@xviidev/ui/components/checkbox'
@@ -61,7 +62,7 @@ export default function LabelPrinter() {
   const [applyTemplate, setApplyTemplate] = useState(true)
   const [sheets, setSheets] = useState<WorkbookSheet[]>([])
   const [sheetIndex, setSheetIndex] = useState(0), [header, setHeader] = useState(true)
-  const [filename, setFilename] = useState(''), [fileError, setFileError] = useState(''), [templateMessage, setTemplateMessage] = useState('')
+  const [excelFile, setExcelFile] = useState<File | null>(null), [fileError, setFileError] = useState(''), [templateMessage, setTemplateMessage] = useState('')
   const [loading, setLoading] = useState(false), [exporting, setExporting] = useState(false), [printMessage, setPrintMessage] = useState('')
   const [settings, setSettings] = useState<LabelSettings>({ ...DEFAULT_SETTINGS })
   const [preset, setPreset] = useState('24'), [paperChoice, setPaperChoice] = useState('a4')
@@ -147,7 +148,7 @@ export default function LabelPrinter() {
   async function importExcel(file: File | undefined) {
     if (!file) return
     const version = ++uploadVersion.current
-    setFileError(''); setSheets([]); setFilename(''); setLoading(true)
+    setFileError(''); setSheets([]); setExcelFile(null); setLoading(true)
     try {
       if (!file.name.toLowerCase().endsWith('.xlsx')) throw new Error('Pilih berkas Excel .xlsx. Simpan ulang berkas .xls sebagai .xlsx terlebih dahulu.')
       if (file.size > 10 * 1024 * 1024) throw new Error('Ukuran berkas maksimal 10 MB.')
@@ -158,7 +159,7 @@ export default function LabelPrinter() {
       if (workbook.some(sheet => sheet.data.length > 5001 || sheet.data.some(row => row.length > 100))) throw new Error('Maksimal 5.000 baris data dan 100 kolom per sheet.')
       const index = Math.max(0, workbook.findIndex(sheet => sheet.data.length > 0))
       const count = workbook[index].data.reduce((max, row) => Math.max(max, row.length), 0)
-      setSheets(workbook); setSheetIndex(index); setFilename(file.name); setHeader(true); setTemplateMessage(`Berkas memiliki ${count} kolom. Sesuaikan pemetaan kolom di Desain label jika diperlukan.`); setCurrentPage(0)
+      setSheets(workbook); setSheetIndex(index); setExcelFile(file); setHeader(true); setTemplateMessage(`Berkas memiliki ${count} kolom. Sesuaikan pemetaan kolom di Desain label jika diperlukan.`); setCurrentPage(0)
     } catch (error) { if (version === uploadVersion.current) setFileError(error instanceof Error ? error.message : 'Berkas gagal dibaca.') }
     finally { if (version === uploadVersion.current) setLoading(false) }
   }
@@ -242,9 +243,8 @@ export default function LabelPrinter() {
             <FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="manual-template" checked={applyTemplate} onCheckedChange={setApplyTemplate} /><FieldLabel htmlFor="manual-template">Terapkan desain yang sama ke semua label</FieldLabel></Field></FieldSet>
             {applyTemplate && <p className="hint">Setiap baris manual menjadi kolom: baris 1 = {'{{1}}'}, baris 2 = {'{{2}}'}, dan seterusnya. Gunakan - untuk baris data yang kosong.</p>}
           </> : <>
-            <Field><FieldLabel htmlFor="excel-file">Berkas Excel (.xlsx)</FieldLabel><Input id="excel-file" type="file" accept=".xlsx" onChange={event => { void importExcel(event.target.files?.[0]); event.target.value = '' }} /></Field>
-            <p className="hint">Maksimal 10 MB. Simpan nomor telepon dan kode berawalan nol sebagai teks.</p><Button role="link" nativeButton={false} variant="link" size="sm" render={<a href={exampleWorkbook} download="contoh-label.xlsx" />}>Unduh contoh Excel</Button>
-            <p className="mt-3 text-sm text-muted-foreground" role="status">{loading ? 'Membaca berkas…' : filename}</p>
+            <Field><FieldLabel htmlFor="excel-file">Berkas Excel (.xlsx)</FieldLabel><FileUpload id="excel-file" file={excelFile} accept=".xlsx" maxSize={10 * 1024 * 1024} label="Pilih Excel" hint="XLSX · maksimal 10 MB" icon={FileSpreadsheetIcon} busy={loading} status={loading ? "Membaca berkas…" : undefined} onFileSelect={importExcel} onClear={() => { uploadVersion.current++; setLoading(false); setExcelFile(null); setSheets([]); setFileError(""); setTemplateMessage(""); setCurrentPage(0) }} /></Field>
+            <p className="hint">Simpan nomor telepon dan kode berawalan nol sebagai teks.</p><Button role="link" nativeButton={false} variant="link" size="sm" render={<a href={exampleWorkbook} download="contoh-label.xlsx" />}>Unduh contoh Excel</Button>
             {sheets.length > 0 && <div className="mt-4 flex flex-col gap-4"><Field className=""><FieldLabel htmlFor="label-setting-1">Sheet</FieldLabel><SelectInput id="label-setting-1" className="w-full" value={String(sheetIndex)} onValueChange={value => { setSheetIndex(Number(value)); setCurrentPage(0) }} options={sheets.map((sheet,i)=>({value:String(i),label:sheet.sheet}))} /></Field><FieldSet><FieldLegend className="sr-only">Opsi label</FieldLegend><Field orientation="horizontal"><Checkbox id="excel-header" checked={header} onCheckedChange={setHeader} /><FieldLabel htmlFor="excel-header">Baris pertama adalah judul kolom</FieldLabel></Field></FieldSet></div>}
           </>}
            </TabsContent>

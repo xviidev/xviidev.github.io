@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { access, readFile } from 'node:fs/promises'
+import { access, readFile, readdir } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { utilityMetadata, legacyPaths } from '../apps/utilities/src/lib/metadata.ts'
 const output = resolve(import.meta.dirname, '../dist')
@@ -21,4 +21,8 @@ for (const [oldPath, target] of Object.entries(legacyPaths)) {
   const html = await readFile(resolve(output, oldPath.slice(1), 'index.html'), 'utf8')
   assert(html.includes(`content="0;url=${target}"`))
 }
+for (const asset of ['cmaps/Adobe-Japan1-UCS2.bcmap', 'standard_fonts/LiberationSans-Regular.ttf', 'wasm/openjpeg.wasm']) {
+  await access(resolve(output, 'utilities/pdfjs', asset))
+}
+assert((await readdir(resolve(output, 'utilities/assets'))).some(name => /^pdf\.worker\.min-.*\.mjs$/.test(name)), 'Missing PDF.js worker')
 console.log('Static entry pages, asset paths, redirects, and domain verified.')

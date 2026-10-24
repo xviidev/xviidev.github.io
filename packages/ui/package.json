@@ -16,7 +16,7 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test src/lib/color.test.ts"
+    "test": "node --test src/lib/color.test.ts src/lib/file.test.ts"
   },
   "peerDependencies": {
     "react": "^19.3.1",

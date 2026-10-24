@@ -9,6 +9,7 @@ Monorepo untuk xvii.dev. Antarmuka tetap berbahasa Indonesia.
 - `packages/ui`: komponen shadcn/ui bersama, preset `b6RfRCplyq`, tema, dan token desain.
 - `packages/label-printer`: utilitas cetak label, Lexical, pratinjau Konva, impor Excel, dan ekspor PDF.
 - `packages/barcode`: pembuat Code 128 dan EAN-13, input satuan atau massal hingga 200 kode, serta ekspor PNG, SVG, dan PDF A4.
+- `packages/pdf-to-image`: konversi halaman PDF ke PNG/JPG melalui PDF.js, dengan pratinjau, rentang halaman, dan unduh ZIP melalui fflate.
 
 Satu package untuk satu utilitas, bukan satu kategori. Kategori hanya metadata pada katalog. Utilitas baru menggunakan komponen dari `@xviidev/ui`, bukan menyalinnya.
 
@@ -26,6 +27,8 @@ npm run build
 ```
 
 Homepage: `/`; katalog: `/utilities/`; cetak label: `/utilities/labels/`.
+
+PDF ke gambar: `/utilities/pdf-to-image/`. Pilih PDF hingga 100 MB, termasuk dokumen dengan kata sandi, lalu unduh halaman yang ditampilkan atau rentang halaman dalam ZIP. Kualitas Standar/Tajam/Sangat tajam memakai 150/200/300 DPI; DPI khusus 72–600 tersedia. Render dilakukan per halaman, maksimal 24 juta piksel dan sisi 8192 px; ZIP dibatasi 256 MB. PNG/JPG memakai latar putih. File, worker, font, CMap, dan decoder PDF diproses/disajikan dari situs sendiri, tanpa layanan konversi atau CDN. File pendukung PDF.js disalin melalui konfigurasi Vite agar tersedia pada mode pengembangan dan GitHub Pages.
 
 Pembuat barcode: `/utilities/barcode/`. EAN-13 menerima 12 digit dengan digit pemeriksa otomatis atau memvalidasi 13 digit lengkap. PNG dan SVG mengunduh kode yang ditampilkan; PDF memuat seluruh daftar sesuai urutan. Unduhan tersedia setelah semua baris valid. Data barcode diproses lokal dan tidak disimpan.
 

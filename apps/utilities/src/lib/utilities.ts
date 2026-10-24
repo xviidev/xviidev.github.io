@@ -1,7 +1,8 @@
 import type { ComponentType } from 'react'
 import { utilityMetadata } from './metadata'
-import { TagsIcon, QrCodeIcon, BarcodeIcon } from '@xviidev/ui/lib/icons'
+import { TagsIcon, QrCodeIcon, BarcodeIcon, FileImageIcon } from '@xviidev/ui/lib/icons'
 const implementations = {
+ 'pdf-to-image': { icon: FileImageIcon, load:()=>import('@xviidev/pdf-to-image') },
  'barcode': { icon: BarcodeIcon, load:()=>import('@xviidev/barcode') },
  'qr-code': { icon: QrCodeIcon, load:()=>import('@xviidev/qr-code') },
  'labels': { icon: TagsIcon, load:()=>import('@xviidev/label-printer') },
