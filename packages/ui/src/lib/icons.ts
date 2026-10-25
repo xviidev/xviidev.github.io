@@ -10,4 +10,3 @@ export { FilesIcon, ScissorsIcon, ArrowUpIcon, ArrowDownIcon } from 'lucide-reac
 export { ChevronLeftIcon } from 'lucide-react'
 export { SquareDashedIcon, WavesIcon, FocusIcon } from 'lucide-react'
 export { PercentIcon } from 'lucide-react'
-export { GaugeIcon, ActivityIcon, PlayIcon, SquareIcon, ClockIcon } from 'lucide-react'

@@ -1,1 +1,0 @@
-export const speedTest = { slug: 'speed-test', title: 'Tes kecepatan internet', description: 'Ukur download, upload, ping, dan jitter melalui Cloudflare, dengan grafik dan riwayat lokal.', category: 'Jaringan', keywords: ['speedtest', 'speed test', 'kecepatan', 'internet', 'wifi', 'download', 'upload', 'ping', 'jitter', 'mbps'] } as const

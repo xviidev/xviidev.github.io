@@ -10,7 +10,6 @@ Monorepo untuk xvii.dev. Antarmuka tetap berbahasa Indonesia.
 - `packages/label-printer`: utilitas cetak label, Lexical, pratinjau Konva, impor Excel, dan ekspor PDF.
 - `packages/barcode`: pembuat Code 128 dan EAN-13, input satuan atau massal hingga 200 kode, serta ekspor PNG, SVG, dan PDF A4.
 - `packages/pdf-to-image`: konversi halaman PDF ke PNG/JPG melalui PDF.js, dengan pratinjau, rentang halaman, dan unduh ZIP melalui fflate.
-- `packages/speed-test`: tes download, upload, ping HTTP, jitter, grafik sampel, dan riwayat lokal melalui Cloudflare Speedtest.
 - `packages/pdf-merge`: gabung beberapa PDF, urutkan file, dan pilih halaman tiap file.
 - `packages/pdf-split`: ekstrak rentang, pisah per halaman atau per sejumlah halaman; hasil jamak diunduh sebagai ZIP.
 - `packages/pdf-core`: pemrosesan PDF bersama melalui pdf-lib dan fflate di worker.
@@ -68,7 +67,3 @@ Pratinjau PDF tersedia di Gabung PDF untuk setiap file dan di Pisah PDF untuk do
 Pembanding gambar mendukung scroll untuk zoom dengan posisi kursor sebagai titik acuan (5%–3.200%), latar transparansi/putih/gelap, dan toggle smoothing piksel. Latar serta smoothing hanya memengaruhi pratinjau. Pegangan pembatas berukuran 24 × 24 px dengan area tarik lebih luas, navigasi keyboard, dan klik dua kali untuk kembali ke tengah. Petunjuk kontrol tersedia melalui tooltip.
 
 Kedua sisi pembanding memakai frame tampilan bersama pada resolusi acuan gambar asli. Rotasi dan flip diterapkan juga pada pratinjau sumber; hasil resize diskalakan ke frame yang sama agar posisi, bentuk, dan ukuran tampilan sejajar. Resize nonproporsional memakai rasio keluaran untuk kedua sisi. File sumber tetap utuh dan ukuran ekspor mengikuti pengaturan. Preset 25/50/75/100/150/200% dihitung dari dimensi sumber setelah rotasi; preset yang melewati batas dimensi/piksel dinonaktifkan. Mengubah rotasi mempertahankan skala resize yang dipilih.
-
-Tes kecepatan internet: `/utilities/speed-test/`, kategori Jaringan. Menggunakan `@cloudflare/speedtest` 1.15.0 yang dimuat setelah tombol Mulai ditekan. Mode Hemat merencanakan 6,6 MB payload, mode Standar 78,6 MB, di luar overhead atau pengulangan permintaan. Pengukuran adaptif dapat melewati ukuran lebih besar pada koneksi lambat. Tersedia ping saat idle dan saat download/upload, jitter, grafik SVG dari sampel aktual, serta 20 riwayat terakhir di LocalStorage dan ekspor CSV. Tidak ada nilai kecepatan yang disimulasikan; nilai kosong tetap ditampilkan sebagai tanda pisah.
-
-Tes memakai endpoint Cloudflare `__down`/`__up`, sehingga trafik dan alamat IP diterima server pengujian. Pengiriman ringkasan dan log tambahan dimatikan melalui `logAimApiUrl: null` dan `logMeasurementApiUrl: null`; kredensial cookie tidak disertakan. Pembatalan, pindah utilitas, pagehide, kehilangan koneksi, kegagalan engine, batas 15 detik per permintaan, atau batas total 120 detik menghentikan pengukuran aktif. Hanya hasil lengkap yang masuk riwayat; callback dari sesi lama diabaikan. Riwayat gagal/terblokir tetap dapat digunakan dalam memori. Tes tidak mengukur ICMP atau packet loss dan tidak menjamin kecepatan ke seluruh tujuan internet.

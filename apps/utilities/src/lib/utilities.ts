@@ -1,8 +1,7 @@
 import type { ComponentType } from 'react'
 import { utilityMetadata } from './metadata'
-import { TagsIcon, QrCodeIcon, BarcodeIcon, FileImageIcon, ImageIcon, FilesIcon, ScissorsIcon, GaugeIcon } from '@xviidev/ui/lib/icons'
+import { TagsIcon, QrCodeIcon, BarcodeIcon, FileImageIcon, ImageIcon, FilesIcon, ScissorsIcon } from '@xviidev/ui/lib/icons'
 const implementations = {
- 'speed-test': { icon: GaugeIcon, load:()=>import('@xviidev/speed-test') },
  'pdf-merge': { icon: FilesIcon, load:()=>import('@xviidev/pdf-merge') },
  'pdf-split': { icon: ScissorsIcon, load:()=>import('@xviidev/pdf-split') },
  'image-compressor': { icon: ImageIcon, load:()=>import('@xviidev/image-compressor') },
