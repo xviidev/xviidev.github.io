@@ -83,8 +83,7 @@ yang valid di Windows 11 belum membuktikan trust/runtime Windows 7; uji terpisah
    Paket macOS gabungan mempertahankan signature binary Intel/ARM.
 
 Binary CLI mandiri tidak bisa ditempeli ticket melalui stapler seperti .app,
-.pkg, atau .dmg; pemeriksaan notarization memakai koneksi online. Launcher shell
-bukan aplikasi .app yang ditandatangani. Jika perlu pengalaman instalasi macOS
+.pkg, atau .dmg; pemeriksaan notarization memakai koneksi online. Jika perlu pengalaman instalasi macOS
 penuh beserta ticket offline, langkah berikutnya adalah membuat paket .pkg/.dmg
 atau .app dan menandatangani/notarize paket tersebut.
 

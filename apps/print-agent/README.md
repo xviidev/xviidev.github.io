@@ -26,7 +26,9 @@ GitHub Actions menerbitkan paket setelah push ke master pada kanal release
 `print-agent-latest`, termasuk SHA256SUMS.txt. Tautan unduhan baru tersedia
 setelah workflow pertama selesai sukses. PR hanya membangun artefak dan tidak
 menerbitkan release. macOS mendapat satu arsip berisi binary Intel dan ARM;
-jalankan `mulai-agen.command` yang memilih arsitektur secara otomatis.
+jalankan xviidev-print-agent-x64 untuk Intel atau xviidev-print-agent-arm64
+untuk Apple Silicon. Paket unduhan hanya berisi binary; dokumentasi tersedia
+di repositori.
 Code signing Windows/macOS tersedia sebagai opsi melalui repository variables
 serta secrets; petunjuk di SIGNING.md. Tanpa kredensial, binary belum mendapat
 signature penerbit OS. Arsip release mendapat attestation asal build GitHub. Pengguna cukup mengekstrak dan menjalankan agen,
@@ -35,8 +37,9 @@ tidak perlu memasang Rust.
 ## Cara pakai unduhan
 
 1. Ekstrak paket unduhan.
-2. Jalankan xviidev-print-agent.exe (Windows), mulai-agen.command (macOS),
-   atau xviidev-print-agent (Linux).
+2. Jalankan xviidev-print-agent.exe (Windows), xviidev-print-agent-x64 atau
+   xviidev-print-agent-arm64 sesuai perangkat (macOS), atau xviidev-print-agent
+   (Linux).
 3. Saat muncul “Aplikasi cetak siap”, buka utilitas Cetak label di XVII Dev.
 4. Pilih printer, lalu klik Cetak label. Biarkan aplikasi cetak berjalan.
 

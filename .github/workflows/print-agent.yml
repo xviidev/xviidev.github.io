@@ -57,8 +57,6 @@ jobs:
           PACKAGE_NAME: print-agent-${{ matrix.name }}
         run: |
           mkdir -p download
-          cp apps/print-agent/README.md download/README.md
-          cp apps/print-agent/SIGNING.md download/SIGNING.md
           if [ -f "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent.exe" ]; then
             cp "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent.exe" download/
             python -c "import shutil,os; shutil.make_archive(os.environ['PACKAGE_NAME'], 'zip', 'download')"
@@ -90,10 +88,7 @@ jobs:
           tar -xzf mac-downloads/print-agent-macos-x64.tar.gz -C intel
           cp arm/xviidev-print-agent bundle/xviidev-print-agent-arm64
           cp intel/xviidev-print-agent bundle/xviidev-print-agent-x64
-          cp apps/print-agent/scripts/mulai-agen.command bundle/
-          cp apps/print-agent/README.md bundle/
-          cp apps/print-agent/SIGNING.md bundle/
-          chmod +x bundle/xviidev-print-agent-* bundle/mulai-agen.command
+          chmod +x bundle/xviidev-print-agent-*
           tar -czf print-agent-macos.tar.gz -C bundle .
       - uses: actions/upload-artifact@v4
         with:
