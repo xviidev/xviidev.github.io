@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { detectAgentDownload } from './agent-download.ts'
 test('download matches OS and supported architecture', () => {
-  assert.equal(detectAgentDownload('Windows NT 10.0; Win64; x64').asset, 'print-agent-windows7-x64.zip')
+  assert.equal(detectAgentDownload('Windows NT 10.0; Win64; x64').asset, 'print-agent-windows-x64.zip')
   assert.equal(detectAgentDownload('Windows NT 6.1; WOW64').asset, 'print-agent-windows7-x64.zip')
   assert.equal(detectAgentDownload('Windows NT 6.1').asset, 'print-agent-windows7-x86.zip')
   assert.equal(detectAgentDownload('Macintosh; Intel Mac OS X 10_15_7').asset, 'print-agent-macos.tar.gz')
@@ -13,4 +13,11 @@ test('unsupported or unknown systems have no download', () => {
     assert.deepEqual(detectAgentDownload(ua), { label: 'Tidak didukung' })
   }
   assert.equal(detectAgentDownload('Macintosh; Intel Mac OS X', 5).asset, undefined)
+})
+
+test('Windows 11 browser recommends the modern build, with a matching label', () => {
+  const result = detectAgentDownload('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36')
+  assert.equal(result.asset, 'print-agent-windows-x64.zip')
+  assert.ok(result.label.includes('Windows 10 / 11'))
+  assert.equal(detectAgentDownload('Windows NT 10.0').asset, 'print-agent-windows7-x86.zip')
 })

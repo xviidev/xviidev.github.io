@@ -21,31 +21,15 @@ fn header<'a>(r: &'a tiny_http::Request, name: &str) -> Option<&'a str> {
         .find(|h| h.field.as_str().as_str().eq_ignore_ascii_case(name))
         .map(|h| h.value.as_str())
 }
-fn authorize(
-    origin: Option<&str>,
-    token: Option<&str>,
-    allowed: &str,
-    bearer: &str,
-) -> Result<(), Error> {
-    if origin.is_some_and(|v| v != allowed) {
+const DEFAULT_ORIGINS: [&str; 2] = ["https://xviidev.github.io", "https://xvii.dev"];
+fn authorize(origin: Option<&str>, allowed: &[String]) -> Result<(), Error> {
+    if !origin.is_some_and(|v| allowed.iter().any(|item| item == v)) {
         return Err((403, "Origin ditolak.".into()));
-    }
-    if token != Some(bearer) {
-        return Err((401, "Token tidak cocok.".into()));
     }
     Ok(())
 }
-fn handle(
-    r: &mut tiny_http::Request,
-    origin: &str,
-    bearer: &str,
-) -> Result<serde_json::Value, Error> {
-    authorize(
-        header(r, "Origin"),
-        header(r, "Authorization"),
-        origin,
-        bearer,
-    )?;
+fn handle(r: &mut tiny_http::Request, origins: &[String]) -> Result<serde_json::Value, Error> {
+    authorize(header(r, "Origin"), origins)?;
     match (r.method(), r.url()) {
         (&Method::Get, "/v1/info") => Ok(backend::info()),
         (&Method::Get, "/v1/printers") => Ok(serde_json::json!(backend::printers()?)),
@@ -75,42 +59,55 @@ fn handle(
     }
 }
 fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let origin =
-        std::env::var("XVII_PRINT_ORIGIN").unwrap_or_else(|_| "https://xviidev.github.io".into());
-    let cors = Header::from_bytes("Access-Control-Allow-Origin", origin.as_str())
-        .map_err(|_| "Origin tidak valid")?;
-    let token = uuid::Uuid::new_v4().to_string();
-    let bearer = format!("Bearer {token}");
-    let server = Server::http("127.0.0.1:17831")?;
+    let origins: Vec<String> = std::env::var("XVII_PRINT_ORIGINS")
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_else(|_| DEFAULT_ORIGINS.iter().map(|v| v.to_string()).collect());
+    if origins.is_empty() {
+        return Err("Daftar origin kosong".into());
+    }
+    for origin in &origins {
+        Header::from_bytes("Access-Control-Allow-Origin", origin.as_str())
+            .map_err(|_| "Origin tidak valid")?;
+    }
+    let port: u16 = std::env::var("XVII_PRINT_PORT")
+        .unwrap_or_else(|_| "17831".into())
+        .parse()?;
+    let server = Server::http(("127.0.0.1", port))?;
     println!(
-        "Agen cetak ({}) — http://127.0.0.1:17831\nToken koneksi: {token}",
-        std::env::consts::OS
+        "Agen cetak ({}) — http://127.0.0.1:{port}\nOrigin: {}",
+        std::env::consts::OS,
+        origins.join(", ")
     );
     // Process one submission at a time, without automatic retries.
     for mut r in server.incoming_requests() {
+        let cors = header(&r, "Origin")
+            .filter(|origin| authorize(Some(origin), &origins).is_ok())
+            .map(|origin| Header::from_bytes("Access-Control-Allow-Origin", origin).unwrap());
         let (status, body) = if r.method() == &Method::Options {
-            if header(&r, "Origin") == Some(origin.as_str()) {
+            if authorize(header(&r, "Origin"), &origins).is_ok() {
                 (204, String::new())
             } else {
                 (403, "Origin ditolak.".into())
             }
         } else {
-            match handle(&mut r, &origin, &bearer) {
+            match handle(&mut r, &origins) {
                 Ok(v) => (200, v.to_string()),
                 Err(e) => e,
             }
         };
-        let response = Response::from_string(body)
+        let mut response = Response::from_string(body)
             .with_status_code(StatusCode(status))
-            .with_header(cors.clone())
             .with_header(Header::from_bytes("Vary", "Origin").unwrap())
             .with_header(Header::from_bytes("Access-Control-Allow-Methods", "GET, POST").unwrap())
             .with_header(
-                Header::from_bytes(
-                    "Access-Control-Allow-Headers",
-                    "authorization, content-type",
-                )
-                .unwrap(),
+                Header::from_bytes("Access-Control-Allow-Headers", "content-type").unwrap(),
             )
             .with_header(
                 Header::from_bytes(
@@ -123,6 +120,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 )
                 .unwrap(),
             );
+        if let Some(cors) = cors {
+            response.add_header(cors);
+        }
         let _ = r.respond(response);
     }
     Ok(())

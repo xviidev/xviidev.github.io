@@ -17,17 +17,19 @@ di Windows 7 asli. Build standar dengan Rust modern tidak ditujukan untuk Window
 
 Tombol di utilitas Cetak label memilih paket berdasarkan OS browser. Perangkat
 mobile, ChromeOS, Linux ARM, dan OS/arsitektur yang tidak dikenali ditandai
-Tidak didukung. Karena browser dapat menyamarkan Windows lama sebagai Windows 10,
-semua unduhan Windows dari UI memakai build kompatibel Rust 1.77.2. Agen tetap
-melaporkan OS sebenarnya melalui /v1/info setelah terhubung.
+Tidak didukung. Windows 10/11 direkomendasikan build Windows modern. Windows 7/8 dan Windows
+32-bit memakai build legacy. Dropdown Versi agen cetak menyediakan pilihan manual
+untuk setiap OS, termasuk jika browser salah melaporkan perangkat. Agen melaporkan
+OS sebenarnya melalui /v1/info setelah terhubung.
 
 GitHub Actions menerbitkan paket setelah push ke master pada kanal release
 `print-agent-latest`, termasuk SHA256SUMS.txt. Tautan unduhan baru tersedia
 setelah workflow pertama selesai sukses. PR hanya membangun artefak dan tidak
 menerbitkan release. macOS mendapat satu arsip berisi binary Intel dan ARM;
 jalankan `mulai-agen.command` yang memilih arsitektur secara otomatis.
-Binary belum ditandatangani/notarized, sehingga sistem dapat meminta persetujuan
-untuk menjalankan unduhan. Pengguna cukup mengekstrak dan menjalankan agen,
+Code signing Windows/macOS tersedia sebagai opsi melalui repository variables
+serta secrets; petunjuk di SIGNING.md. Tanpa kredensial, binary belum mendapat
+signature penerbit OS. Arsip release mendapat attestation asal build GitHub. Pengguna cukup mengekstrak dan menjalankan agen,
 tidak perlu memasang Rust.
 
 ## Menjalankan
@@ -39,21 +41,24 @@ cargo run --release --locked --manifest-path apps/print-agent/Cargo.toml
 ```
 
 Atau jalankan binary untuk OS/arsitektur yang sesuai. Rust hanya diperlukan saat
-membangun. Salin token terminal ke utilitas Cetak label, klik Hubungkan agen,
-pilih printer, lalu Cetak melalui agen. Pesan koneksi menampilkan OS dari agen,
-bukan tebakan browser. Token berubah setiap mulai dan tidak disimpan aplikasi.
+membangun. Buka utilitas Cetak label; printer dicari otomatis. Pilih printer,
+lalu klik Cetak label. Jika agen baru dijalankan, klik Cari printer. Tidak perlu
+token. Pesan koneksi menampilkan OS dari agen, bukan tebakan browser.
 Hentikan agen dengan Ctrl+C.
 
-Origin bawaan `https://xviidev.github.io`. Untuk domain/pengembangan lain, atur
-origin persis tanpa path sebelum menjalankan:
+Origin bawaan `https://xviidev.github.io` dan `https://xvii.dev`. Untuk
+pengembangan, ganti daftar origin dengan nilai yang dipisahkan koma (tanpa path):
 
 ```powershell
-$env:XVII_PRINT_ORIGIN = 'http://localhost:5173'
+$env:XVII_PRINT_ORIGINS = 'http://localhost:5173'
 ```
 
 ```sh
-export XVII_PRINT_ORIGIN='http://localhost:5173'
+export XVII_PRINT_ORIGINS='http://localhost:5173'
 ```
+
+Untuk pengujian agen tanpa mengganggu instance aktif, `XVII_PRINT_PORT` dapat
+mengganti port listener (tetap loopback). UI selalu memakai port 17831.
 
 Linux Debian/Ubuntu memerlukan `cups-client` dan layanan CUPS yang aktif.
 Periksa `lpstat -e` pada macOS/Linux sebelum menghubungkan utilitas.
@@ -70,7 +75,7 @@ cargo +1.77.2 build --release --locked --manifest-path apps/print-agent/Cargo.to
 ```
 
 Salin EXE dari `apps/print-agent/target/<target>/release/` ke komputer tujuan.
-Gunakan x86 untuk Windows 7 32-bit. Dependensi UUID, tempfile, dan serialisasi
+Gunakan x86 untuk Windows 7 32-bit. Dependensi tempfile dan serialisasi
 dikunci agar build legacy dapat diulang; commit Cargo.lock dan gunakan --locked.
 Jangan regenerasi lockfile dengan format lebih baru tanpa menguji Rust 1.77.2.
 
@@ -84,7 +89,11 @@ AbortSignal.timeout yang lebih baru.
 
 ## API dan perilaku
 
-- Hanya `127.0.0.1:17831`; semua endpoint memerlukan token Bearer.
+- Hanya `127.0.0.1:17831`; seluruh endpoint memerlukan header Origin yang cocok
+  dengan salah satu domain yang diizinkan. Origin asing, null, atau kosong
+  ditolak. Tidak memakai token. POST hanya menerima application/json.
+- Pembatasan Origin berlaku untuk browser; ini bukan autentikasi aplikasi
+  native lokal, yang dapat mengirim header Origin sendiri.
 - `GET /v1/info`: `os`, `arch`, `os_version`, versi agen, dan nama backend.
 - `GET /v1/printers`: daftar nama tujuan cetak terpasang.
 - `POST /v1/jobs`: `{ printer, width_mm, height_mm, pages: [base64PNG] }`.

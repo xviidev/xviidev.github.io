@@ -32,6 +32,24 @@ jobs:
         run: cargo +${{ matrix.toolchain }} test --locked --manifest-path apps/print-agent/Cargo.toml --target ${{ matrix.target }}
       - name: Build
         run: cargo +${{ matrix.toolchain }} build --release --locked --manifest-path apps/print-agent/Cargo.toml --target ${{ matrix.target }}
+      - name: Sign Windows executable
+        if: runner.os == 'Windows' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && vars.ENABLE_WINDOWS_SIGNING == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+        run: ./apps/print-agent/scripts/sign-windows.ps1 -Binary apps/print-agent/target/${{ matrix.target }}/release/xviidev-print-agent.exe
+      - name: Sign and notarize macOS executable
+        if: runner.os == 'macOS' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && vars.ENABLE_MACOS_SIGNING == 'true'
+        shell: bash
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bash apps/print-agent/scripts/sign-macos.sh apps/print-agent/target/${{ matrix.target }}/release/xviidev-print-agent
       - name: Package download
         shell: bash
         env:
@@ -40,6 +58,7 @@ jobs:
         run: |
           mkdir -p download
           cp apps/print-agent/README.md download/README.md
+          cp apps/print-agent/SIGNING.md download/SIGNING.md
           if [ -f "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent.exe" ]; then
             cp "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent.exe" download/
             python -c "import shutil,os; shutil.make_archive(os.environ['PACKAGE_NAME'], 'zip', 'download')"
@@ -73,6 +92,7 @@ jobs:
           cp intel/xviidev-print-agent bundle/xviidev-print-agent-x64
           cp apps/print-agent/scripts/mulai-agen.command bundle/
           cp apps/print-agent/README.md bundle/
+          cp apps/print-agent/SIGNING.md bundle/
           chmod +x bundle/xviidev-print-agent-* bundle/mulai-agen.command
           tar -czf print-agent-macos.tar.gz -C bundle .
       - uses: actions/upload-artifact@v4
@@ -85,12 +105,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           pattern: print-agent-*
           merge-multiple: true
           path: downloads
+      - name: Attest release downloads
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            downloads/print-agent-*.zip
+            downloads/print-agent-*.tar.gz
       - name: Publish download channel
         env:
           GH_TOKEN: ${{ github.token }}
@@ -104,4 +132,4 @@ jobs:
             gh release create print-agent-latest --target "$COMMIT_SHA" --title "Agen cetak lokal" --notes "Paket agen cetak lokal Windows, Windows 7 (eksperimental), macOS, dan Linux." --prerelease
           fi
           gh release upload print-agent-latest print-agent-* SHA256SUMS.txt --clobber
-          gh release edit print-agent-latest --notes "Build dari commit $COMMIT_SHA. Windows 7 bersifat eksperimental dan memerlukan SP1, WMF 5.1, .NET Framework 4.8, serta driver yang sesuai. Ekstrak paket, jalankan agen, lalu salin token ke utilitas Cetak label."
+          gh release edit print-agent-latest --notes "Build dari commit $COMMIT_SHA. Windows 7 bersifat eksperimental dan memerlukan SP1, WMF 5.1, .NET Framework 4.8, serta driver yang sesuai. Ekstrak paket, jalankan aplikasi cetak, lalu pilih printer di utilitas Cetak label. Mendukung https://xviidev.github.io dan https://xvii.dev tanpa token."

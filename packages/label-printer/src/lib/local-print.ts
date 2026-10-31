@@ -4,13 +4,13 @@ import type { PrintModel, FontKey } from './print-layout'
 import type { LoadedFont } from './fonts'
 import type { LabelSettings } from './labels'
 
-export async function agentRequest(token: string, route: string, body?: unknown) {
+export async function agentRequest(route: string, body?: unknown) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), body ? 300000 : 10000)
   try {
     const response = await fetch(`http://127.0.0.1:17831/v1/${route}`, {
       method: body ? 'POST' : 'GET',
-      headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      headers: body ? { 'Content-Type': 'application/json' } : {},
       ...(body ? { body: JSON.stringify(body) } : {}),
       signal: controller.signal,
     })

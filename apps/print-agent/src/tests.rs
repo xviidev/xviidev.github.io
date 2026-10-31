@@ -2,10 +2,12 @@
 mod tests {
     use super::*;
     #[test]
-    fn requires_token_and_rejects_other_origins() {
-        assert!(authorize(Some("https://app.test"), Some("Bearer secret"), "https://app.test", "Bearer secret").is_ok());
-        assert_eq!(authorize(None, None, "https://app.test", "Bearer secret").unwrap_err().0, 401);
-        assert_eq!(authorize(Some("https://other.test"), Some("Bearer secret"), "https://app.test", "Bearer secret").unwrap_err().0, 403);
+    fn accepts_both_sites_and_rejects_missing_or_foreign_origins() {
+        let allowed: Vec<String> = DEFAULT_ORIGINS.iter().map(|v| v.to_string()).collect();
+        for origin in DEFAULT_ORIGINS { assert!(authorize(Some(origin), &allowed).is_ok()); }
+        for origin in [None, Some("null"), Some("https://example.org"), Some("https://xvii.dev.evil.test"), Some("http://xvii.dev")] {
+            assert_eq!(authorize(origin, &allowed).unwrap_err().0, 403);
+        }
     }
     #[test]
     fn rejects_invalid_jobs() {
