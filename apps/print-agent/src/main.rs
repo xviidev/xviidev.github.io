@@ -80,11 +80,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .unwrap_or_else(|_| "17831".into())
         .parse()?;
     let server = Server::http(("127.0.0.1", port))?;
-    println!(
-        "Agen cetak ({}) — http://127.0.0.1:{port}\nOrigin: {}",
-        std::env::consts::OS,
-        origins.join(", ")
-    );
+    println!("Aplikasi cetak siap.\nBuka Cetak label di XVII Dev, lalu pilih printer.\nBiarkan jendela ini terbuka selama mencetak.");
     // Process one submission at a time, without automatic retries.
     for mut r in server.incoming_requests() {
         let cors = header(&r, "Origin")

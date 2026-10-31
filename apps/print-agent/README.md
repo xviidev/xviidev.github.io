@@ -32,7 +32,18 @@ serta secrets; petunjuk di SIGNING.md. Tanpa kredensial, binary belum mendapat
 signature penerbit OS. Arsip release mendapat attestation asal build GitHub. Pengguna cukup mengekstrak dan menjalankan agen,
 tidak perlu memasang Rust.
 
-## Menjalankan
+## Cara pakai unduhan
+
+1. Ekstrak paket unduhan.
+2. Jalankan xviidev-print-agent.exe (Windows), mulai-agen.command (macOS),
+   atau xviidev-print-agent (Linux).
+3. Saat muncul “Aplikasi cetak siap”, buka utilitas Cetak label di XVII Dev.
+4. Pilih printer, lalu klik Cetak label. Biarkan aplikasi cetak berjalan.
+
+Kedua situs resmi sudah didukung otomatis. Tidak ada konfigurasi origin atau
+token yang perlu dimasukkan.
+
+## Menjalankan dari source (pengembangan)
 
 Dari root repositori pada sistem tujuan:
 
@@ -45,20 +56,6 @@ membangun. Buka utilitas Cetak label; printer dicari otomatis. Pilih printer,
 lalu klik Cetak label. Jika agen baru dijalankan, klik Cari printer. Tidak perlu
 token. Pesan koneksi menampilkan OS dari agen, bukan tebakan browser.
 Hentikan agen dengan Ctrl+C.
-
-Origin bawaan `https://xviidev.github.io` dan `https://xvii.dev`. Untuk
-pengembangan, ganti daftar origin dengan nilai yang dipisahkan koma (tanpa path):
-
-```powershell
-$env:XVII_PRINT_ORIGINS = 'http://localhost:5173'
-```
-
-```sh
-export XVII_PRINT_ORIGINS='http://localhost:5173'
-```
-
-Untuk pengujian agen tanpa mengganggu instance aktif, `XVII_PRINT_PORT` dapat
-mengganti port listener (tetap loopback). UI selalu memakai port 17831.
 
 Linux Debian/Ubuntu memerlukan `cups-client` dan layanan CUPS yang aktif.
 Periksa `lpstat -e` pada macOS/Linux sebelum menghubungkan utilitas.
@@ -111,6 +108,25 @@ AbortSignal.timeout yang lebih baru.
 - Driver dapat menolak/mengubah ukuran media atau memotong margin fisik.
   Uji satu lembar dengan penggaris sebelum mencetak banyak label.
 - Belum mencakup installer, autostart, status spooler, atau ZPL/TSPL RAW.
+
+## Konfigurasi pengembangan
+
+Pengguna unduhan tidak perlu mengatur origin, port, atau token. Pengaturan
+berikut hanya untuk pengembangan lokal.
+
+Origin bawaan `https://xviidev.github.io` dan `https://xvii.dev`. Untuk
+pengembangan, ganti daftar origin dengan nilai yang dipisahkan koma (tanpa path):
+
+```powershell
+$env:XVII_PRINT_ORIGINS = 'http://localhost:5173'
+```
+
+```sh
+export XVII_PRINT_ORIGINS='http://localhost:5173'
+```
+
+Untuk pengujian agen tanpa mengganggu instance aktif, `XVII_PRINT_PORT` dapat
+mengganti port listener (tetap loopback). UI selalu memakai port 17831.
 
 ## Verifikasi
 
