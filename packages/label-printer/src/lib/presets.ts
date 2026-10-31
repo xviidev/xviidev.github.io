@@ -33,11 +33,66 @@ export class PresetDatabase extends Dexie {
   }
 }
 export function initialPresets(): DocumentPreset[] {
-  return [24, 21].map(count => ({
-    id: `a4-${count}`, name: `A4 · ${count} label`,
-    description: `3 kolom × ${count / 3} baris. Label 63,5 × ${count === 24 ? '33,9' : '38,1'} mm.`,
-    settings: paperSettings({ ...DEFAULT_SETTINGS, ...(count === 21 ? { labelHeight: 38.1, marginTop: 15, marginBottom: 15 } : {}) }), updatedAt: 0,
-  }))
+  return [
+    {
+      id: 'a4-24', name: 'A4 · 24 label',
+      description: '3 kolom × 8 baris. Label 63,5 × 33,9 mm.',
+      settings: paperSettings(DEFAULT_SETTINGS), updatedAt: 0,
+    },
+    {
+      id: 'a4-21', name: 'A4 · 21 label',
+      description: '3 kolom × 7 baris. Label 63,5 × 38,1 mm.',
+      settings: paperSettings({ ...DEFAULT_SETTINGS, labelHeight: 38.1, marginTop: 15, marginBottom: 15 }), updatedAt: 0,
+    },
+    {
+      id: 'tj-103', name: 'Tom & Jerry 103 (Undangan)',
+      description: '2 kolom × 6 baris = 12 label (64 × 32 mm). Ukuran stiker paling populer untuk undangan pernikahan.',
+      settings: paperSettings({
+        ...DEFAULT_SETTINGS,
+        paperWidth: 137, paperHeight: 205,
+        labelWidth: 64, labelHeight: 32,
+        marginLeft: 2, marginRight: 2,
+        marginTop: 7, marginBottom: 6,
+        gapX: 5, gapY: 0,
+      }), updatedAt: 0,
+    },
+    {
+      id: 'tj-121', name: 'Tom & Jerry 121 (Nama / Arsip)',
+      description: '2 kolom × 5 baris = 10 label (75 × 38 mm). Cocok untuk nama buku, map kantor, dan dokumen.',
+      settings: paperSettings({
+        ...DEFAULT_SETTINGS,
+        paperWidth: 154, paperHeight: 210,
+        labelWidth: 75, labelHeight: 38,
+        marginLeft: 2, marginRight: 2,
+        marginTop: 10, marginBottom: 10,
+        gapX: 0, gapY: 0,
+      }), updatedAt: 0,
+    },
+    {
+      id: 'thermal-100x150', name: 'Thermal Resi Pengiriman (100 × 150 mm)',
+      description: '1 label per lembar / roll thermal. Standar stiker resi pengiriman marketplace dan ekspedisi.',
+      settings: paperSettings({
+        ...DEFAULT_SETTINGS,
+        paperWidth: 100, paperHeight: 150,
+        labelWidth: 100, labelHeight: 150,
+        marginLeft: 0, marginRight: 0,
+        marginTop: 0, marginBottom: 0,
+        gapX: 0, gapY: 0,
+      }), updatedAt: 0,
+    },
+    {
+      id: 'thermal-50x30', name: 'Thermal Barcode Toko (50 × 30 mm)',
+      description: '1 label per lembar / roll thermal (50 × 30 mm). Cocok untuk barcode produk dan label harga.',
+      settings: paperSettings({
+        ...DEFAULT_SETTINGS,
+        paperWidth: 50, paperHeight: 30,
+        labelWidth: 50, labelHeight: 30,
+        marginLeft: 0, marginRight: 0,
+        marginTop: 0, marginBottom: 0,
+        gapX: 0, gapY: 0,
+      }), updatedAt: 0,
+    },
+  ]
 }
 export function validatePreset(value: DocumentPreset): DocumentPreset {
   if (typeof value.name !== 'string' || typeof value.description !== 'string') throw new Error('Nama dan keterangan preset harus berupa teks.')

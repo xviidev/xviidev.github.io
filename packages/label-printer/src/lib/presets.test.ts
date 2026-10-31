@@ -9,14 +9,14 @@ function database() { return new PresetDatabase(`test-presets-${crypto.randomUUI
 test('presets and active selection survive reopening the local database', async () => {
   const db = database()
   try {
-    assert.equal((await loadPresets(db)).length, 2)
+    assert.equal((await loadPresets(db)).length, initialPresets().length)
     const value = { ...initialPresets()[0], id: 'custom', name: 'Label toko', description: 'Alamat pengiriman', updatedAt: 123 }
     await savePreset(db, value)
     db.close()
     await db.open()
     assert.deepEqual(await db.presets.get('custom'), value)
     assert.equal((await db.preferences.get('active'))?.value, 'custom')
-    assert.equal((await loadPresets(db)).length, 3)
+    assert.equal((await loadPresets(db)).length, initialPresets().length + 1)
     assert.deepEqual(Object.keys((await db.presets.get('custom'))!).sort(), ['description','id','name','settings','updatedAt'])
   } finally { await db.delete() }
 })
@@ -25,7 +25,10 @@ test('editing and deleting initial presets never resets them on initialization',
   try {
     await loadPresets(db)
     await savePreset(db, { ...initialPresets()[0], name: 'Ukuran pribadi' })
-    await removePreset(db, 'a4-21')
+    const all = await loadPresets(db)
+    for (const item of all) {
+      if (item.id !== initialPresets()[0].id) await removePreset(db, item.id)
+    }
     const saved = await loadPresets(db)
     assert.equal(saved.length, 1)
     assert.equal(saved[0].name, 'Ukuran pribadi')

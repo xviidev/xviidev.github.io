@@ -46,7 +46,14 @@ export function PrintControls({ preference, onPreference, connection, checking, 
       {preference === 'auto' && connection.status === 'ready' && limits.client && <Field><FieldLabel htmlFor="print-destination">Printer</FieldLabel><SelectInput id="print-destination" value={printer} disabled={busy} label="Pilih printer" onValueChange={onPrinter} options={connection.printers.map(name => ({ value: name, label: name }))} /></Field>}
       <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{status}</p>
       {preference === 'auto' && <Field><Button variant="link" size="sm" disabled={busy || checking} onClick={onRefresh}>Periksa printer lagi</Button></Field>}
-      {route === 'browser' && <p className="text-sm text-muted-foreground">Di jendela cetak, pilih ukuran kertas yang sama dan skala 100%. Matikan header dan footer jika muncul.</p>}
+      {route === 'browser' && <div className="border border-border bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
+        <span className="mb-1 block font-medium text-foreground">Pengaturan penting di jendela cetak browser:</span>
+        <ul className="list-disc pl-4 space-y-0.5">
+          <li><strong>Margin:</strong> Pilih <em>None / Tanpa margin</em> agar posisi stiker tidak melenceng.</li>
+          <li><strong>Skala:</strong> Atur ke <em>100%</em> (jangan pilih <em>Fit to page</em>).</li>
+          <li><strong>Header &amp; footer:</strong> Hilangkan centang jika muncul.</li>
+        </ul>
+      </div>}
     </FieldGroup>
     {preference === 'auto' && connection.status === 'unavailable' ? <Alert role="region" aria-label="Siapkan pencetakan langsung">
       <AlertTitle>Tampilkan printer di halaman ini</AlertTitle>
