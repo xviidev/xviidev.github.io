@@ -1,0 +1,107 @@
+name: Build print agent
+on:
+  push:
+    paths: ['apps/print-agent/**', '.github/workflows/print-agent.yml']
+  pull_request:
+    paths: ['apps/print-agent/**', '.github/workflows/print-agent.yml']
+  workflow_dispatch:
+concurrency:
+  group: print-agent-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { os: windows-latest, toolchain: stable, target: x86_64-pc-windows-msvc, name: windows-x64 }
+          - { os: windows-latest, toolchain: 1.77.2, target: x86_64-pc-windows-msvc, name: windows7-x64 }
+          - { os: windows-latest, toolchain: 1.77.2, target: i686-pc-windows-msvc, name: windows7-x86 }
+          - { os: ubuntu-latest, toolchain: stable, target: x86_64-unknown-linux-gnu, name: linux-x64 }
+          - { os: macos-15, toolchain: stable, target: aarch64-apple-darwin, name: macos-arm64 }
+          - { os: macos-15-intel, toolchain: stable, target: x86_64-apple-darwin, name: macos-x64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare Rust
+        run: |
+          rustup toolchain install ${{ matrix.toolchain }} --profile minimal
+          rustup target add --toolchain ${{ matrix.toolchain }} ${{ matrix.target }}
+      - name: Test
+        run: cargo +${{ matrix.toolchain }} test --locked --manifest-path apps/print-agent/Cargo.toml --target ${{ matrix.target }}
+      - name: Build
+        run: cargo +${{ matrix.toolchain }} build --release --locked --manifest-path apps/print-agent/Cargo.toml --target ${{ matrix.target }}
+      - name: Package download
+        shell: bash
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+          PACKAGE_NAME: print-agent-${{ matrix.name }}
+        run: |
+          mkdir -p download
+          cp apps/print-agent/README.md download/README.md
+          if [ -f "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent.exe" ]; then
+            cp "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent.exe" download/
+            python -c "import shutil,os; shutil.make_archive(os.environ['PACKAGE_NAME'], 'zip', 'download')"
+          else
+            cp "apps/print-agent/target/$BUILD_TARGET/release/xviidev-print-agent" download/
+            tar -czf "$PACKAGE_NAME.tar.gz" -C download .
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: print-agent-${{ matrix.name }}
+          path: |
+            print-agent-*.zip
+            print-agent-*.tar.gz
+          if-no-files-found: error
+  package-macos:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: print-agent-macos-*
+          merge-multiple: true
+          path: mac-downloads
+      - name: Combine macOS architectures
+        run: |
+          mkdir -p arm intel bundle
+          tar -xzf mac-downloads/print-agent-macos-arm64.tar.gz -C arm
+          tar -xzf mac-downloads/print-agent-macos-x64.tar.gz -C intel
+          cp arm/xviidev-print-agent bundle/xviidev-print-agent-arm64
+          cp intel/xviidev-print-agent bundle/xviidev-print-agent-x64
+          cp apps/print-agent/scripts/mulai-agen.command bundle/
+          cp apps/print-agent/README.md bundle/
+          chmod +x bundle/xviidev-print-agent-* bundle/mulai-agen.command
+          tar -czf print-agent-macos.tar.gz -C bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: print-agent-macos
+          path: print-agent-macos.tar.gz
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: [build, package-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: print-agent-*
+          merge-multiple: true
+          path: downloads
+      - name: Publish download channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          cd downloads
+          sha256sum print-agent-* > SHA256SUMS.txt
+          if ! gh release view print-agent-latest > /dev/null 2>&1; then
+            gh release create print-agent-latest --target "$COMMIT_SHA" --title "Agen cetak lokal" --notes "Paket agen cetak lokal Windows, Windows 7 (eksperimental), macOS, dan Linux." --prerelease
+          fi
+          gh release upload print-agent-latest print-agent-* SHA256SUMS.txt --clobber
+          gh release edit print-agent-latest --notes "Build dari commit $COMMIT_SHA. Windows 7 bersifat eksperimental dan memerlukan SP1, WMF 5.1, .NET Framework 4.8, serta driver yang sesuai. Ekstrak paket, jalankan agen, lalu salin token ke utilitas Cetak label."

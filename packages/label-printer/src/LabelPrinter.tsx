@@ -1,3 +1,5 @@
+import { AGENT_RELEASE, detectAgentDownload } from './lib/agent-download'
+import { agentRequest, rasterPages } from './lib/local-print'
 import { FileUpload } from '@xviidev/ui/components/file-upload'
 import { MeasurementHelp, measurementIcons } from './components/MeasurementHelp'
 import type { MeasurementKind } from './components/MeasurementHelp'
@@ -54,6 +56,8 @@ function download(blob: Blob, filename: string) {
 }
 
 export default function LabelPrinter() {
+  const agentDownload = detectAgentDownload(navigator.userAgent, navigator.maxTouchPoints)
+  const [agentToken, setAgentToken] = useState(''), [printers, setPrinters] = useState<string[]>([]), [printer, setPrinter] = useState(''), [agentBusy, setAgentBusy] = useState(false)
   const [mode, setMode] = useState<'manual' | 'excel'>('manual')
   const [manualText, setManualText] = useState('')
   const manualDoc = useMemo(() => fromText(manualText), [manualText])
@@ -182,6 +186,27 @@ export default function LabelPrinter() {
       setTemplateMessage('Template dimuat. Data penerima tetap menggunakan input saat ini.')
     } catch { setTemplateMessage('Desain tidak valid. Gunakan berkas JSON dari tombol Unduh desain JSON.') }
   }
+  async function connectAgent() {
+    setAgentBusy(true)
+    try {
+      const info = await agentRequest(agentToken, 'info')
+      if (!info || typeof info !== 'object' || !('os' in info) || !['windows', 'macos', 'linux'].includes(String(info.os))) throw new Error('Sistem operasi agen tidak didukung.')
+      const osName = { windows: 'Windows', macos: 'macOS', linux: 'Linux' }[String(info.os)] ?? String(info.os)
+      const result = await agentRequest(agentToken, 'printers')
+      if (!Array.isArray(result) || !result.every(item => typeof item === 'string')) throw new Error('Respons agen tidak valid.')
+      setPrinters(result); setPrinter(result[0] ?? ''); setPrintMessage(`Agen ${osName} terhubung. ${result.length ? 'Pilih printer sebelum mencetak.' : 'Belum ada printer terpasang.'}`)
+    } catch (error) { setPrinters([]); setPrinter(''); setPrintMessage(error instanceof Error ? error.message : 'Agen tidak terhubung.') }
+    finally { setAgentBusy(false) }
+  }
+  async function printLocal() {
+    if (!canExport || !model || !renderState || !printer || agentBusy) return
+    setAgentBusy(true); setExporting(true); setPrintMessage('Menyiapkan pekerjaan cetak…')
+    try {
+      await agentRequest(agentToken, 'jobs', { printer, width_mm: settings.paperWidth, height_mm: settings.paperHeight, pages: rasterPages(model, settings, renderState.fonts) })
+      setPrintMessage('Pekerjaan diteruskan ke antrean cetak sistem. Periksa printer untuk hasil cetak.')
+    } catch (error) { setPrintMessage('Status cetak belum pasti. Periksa antrean cetak sistem sebelum mencoba lagi. ' + (error instanceof Error ? error.message : '')) }
+    finally { setAgentBusy(false); setExporting(false) }
+  }
   async function exportPdf(open: boolean) {
     if (!canExport || !model) return
     const viewer = open ? window.open('about:blank', '_blank') : null
@@ -282,6 +307,15 @@ export default function LabelPrinter() {
         {errors.length > 0 && <Alert variant="destructive" className="mb-4"><AlertDescription><ul className="list-disc pl-4">{errors.map(error => <li key={error}>{error}</li>)}</ul></AlertDescription></Alert>}
         {!!model?.overflow.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Isi pada label {model.overflow.slice(0, 8).map(i => i + 1).join(', ')}{model.overflow.length > 8 ? ', …' : ''} tidak muat. Kecilkan huruf atau tinggi barcode, atur posisi, atau perbesar label.</AlertDescription></Alert>}
         {!!model?.unsupported.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Ada karakter yang tidak didukung font. Ganti karakter khusus atau emoji pada label {model.unsupported.slice(0, 8).map(i => i + 1).join(', ')} sebelum mengekspor.</AlertDescription></Alert>}
+        <FieldGroup className="mb-4">
+          <Field>{agentDownload.asset ? <Button variant="outline" render={<a href={AGENT_RELEASE + agentDownload.asset} />} nativeButton={false}><DownloadIcon />{agentDownload.label}</Button> : <p role="status">Tidak didukung — agen cetak belum tersedia untuk sistem atau arsitektur perangkat ini.</p>}</Field>
+          {agentDownload.asset && <p className="text-sm text-muted-foreground">Ekstrak unduhan, jalankan agen, lalu salin token di bawah. Windows 7 memerlukan SP1, PowerShell 5.1 dan .NET Framework 4.8; dukungannya masih eksperimental. macOS: jalankan berkas mulai-agen.command. Linux: jalankan xviidev-print-agent.</p>}
+          <Field><FieldLabel htmlFor="agent-token">Token agen cetak lokal</FieldLabel><Input id="agent-token" type="password" autoComplete="off" value={agentToken} disabled={agentBusy} onChange={event => { setAgentToken(event.target.value); setPrinters([]); setPrinter('') }} placeholder="Salin token dari agen Rust" /></Field>
+          <Field><Button variant="outline" disabled={!agentToken || agentBusy} onClick={() => { void connectAgent() }}>Hubungkan agen</Button></Field>
+          {printers.length > 0 && <Field><FieldLabel htmlFor="agent-printer">Printer lokal</FieldLabel><SelectInput id="agent-printer" value={printer} onValueChange={setPrinter} disabled={agentBusy} options={printers.map(name => ({ value: name, label: name }))} /></Field>}
+          <Field><Button disabled={!canExport || !printer || agentBusy} onClick={() => { void printLocal() }}><PrinterIcon />{agentBusy ? 'Memproses…' : 'Cetak melalui agen'}</Button></Field>
+          <p className="text-sm text-muted-foreground">Jalankan agen di komputer ini, lalu masukkan token yang ditampilkan. Browser dapat meminta izin akses jaringan lokal. Data cetak diproses di komputer ini.</p>
+        </FieldGroup>
         {printMessage && <p className="hint mb-4" role="status">{printMessage}</p>}
         <div className="mb-3 flex flex-wrap items-center gap-4"><Button variant="outline" size="sm" aria-pressed={dragMode} onClick={() => setDragMode(previous => !previous)}>Geser blok teks</Button><span className="text-sm text-muted-foreground">{dragMode ? 'Geser teks di canvas. Berlaku untuk semua label.' : 'Format teks tetap mengikuti editor dan template.'}</span></div>
         <div className="border border-border bg-muted p-4"><div ref={previewRef} className="min-w-0 overflow-hidden">

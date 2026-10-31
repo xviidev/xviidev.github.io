@@ -4,7 +4,7 @@ import { PT_PER_MM } from '../lib/print-layout'
 import type { LoadedFont } from '../lib/fonts'
 import type { LabelSettings } from '../lib/labels'
 
-function drawRuns(canvas: CanvasRenderingContext2D, runs: PlacedRun[], fonts: Map<FontKey, LoadedFont>) {
+export function drawRuns(canvas: CanvasRenderingContext2D, runs: PlacedRun[], fonts: Map<FontKey, LoadedFont>) {
   for (const run of runs) {
     const font = fonts.get(run.key)!.font
     canvas.save(); canvas.translate(run.x, run.baseline); canvas.scale(run.size / font.unitsPerEm, -run.size / font.unitsPerEm); canvas.fillStyle = run.color ?? '#111111'

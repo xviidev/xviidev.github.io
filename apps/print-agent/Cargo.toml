@@ -1,0 +1,13 @@
+[package]
+name = "xviidev-print-agent"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.77"
+
+[dependencies]
+tiny_http = "0.12"
+serde = { version = "=1.0.197", features = ["derive"] }
+serde_json = "=1.0.115"
+uuid = { version = "=1.8.0", features = ["v4"] }
+tempfile = "=3.10.1"
+base64 = "0.22"

@@ -3,3 +3,4 @@ dist/
 .astro/
 .tanstack/
 *.tsbuildinfo
+apps/print-agent/target/
