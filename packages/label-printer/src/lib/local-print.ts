@@ -4,9 +4,12 @@ import type { PrintModel, FontKey } from './print-layout'
 import type { LoadedFont } from './fonts'
 import type { LabelSettings } from './labels'
 
-export async function agentRequest(route: string, body?: unknown) {
+export async function agentRequest(route: string, body?: unknown, options: { signal?: AbortSignal; timeout?: number } = {}) {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), body ? 300000 : 10000)
+  const abort = () => controller.abort()
+  options.signal?.addEventListener('abort', abort, { once: true })
+  if (options.signal?.aborted) abort()
+  const timer = setTimeout(abort, options.timeout ?? (body ? 300000 : 5000))
   try {
     const response = await fetch(`http://127.0.0.1:17831/v1/${route}`, {
       method: body ? 'POST' : 'GET',
@@ -16,7 +19,10 @@ export async function agentRequest(route: string, body?: unknown) {
     })
     if (!response.ok) throw new Error(await response.text())
     return await response.json() as unknown
-  } finally { clearTimeout(timer) }
+  } finally {
+    clearTimeout(timer)
+    options.signal?.removeEventListener('abort', abort)
+  }
 }
 
 export function rasterPages(model: PrintModel, s: LabelSettings, fonts: Map<FontKey, LoadedFont>): string[] {

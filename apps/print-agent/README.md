@@ -27,8 +27,8 @@ GitHub Actions menerbitkan paket setelah push ke master pada kanal release
 setelah workflow pertama selesai sukses. PR hanya membangun artefak dan tidak
 menerbitkan release. macOS mendapat satu arsip berisi binary Intel dan ARM;
 jalankan xviidev-print-agent-x64 untuk Intel atau xviidev-print-agent-arm64
-untuk Apple Silicon. Paket unduhan hanya berisi binary; dokumentasi tersedia
-di repositori.
+untuk Apple Silicon. Paket unduhan berisi aplikasi dan README.md dengan petunjuk penggunaan
+untuk pengguna. Panduan teknis tetap tersedia di repositori.
 Code signing Windows/macOS tersedia sebagai opsi melalui repository variables
 serta secrets; petunjuk di SIGNING.md. Tanpa kredensial, binary belum mendapat
 signature penerbit OS. Arsip release mendapat attestation asal build GitHub. Pengguna cukup mengekstrak dan menjalankan agen,
@@ -55,9 +55,9 @@ cargo run --release --locked --manifest-path apps/print-agent/Cargo.toml
 ```
 
 Atau jalankan binary untuk OS/arsitektur yang sesuai. Rust hanya diperlukan saat
-membangun. Buka utilitas Cetak label; printer dicari otomatis. Pilih printer,
-lalu klik Cetak label. Jika agen baru dijalankan, klik Cari printer. Tidak perlu
-token. Pesan koneksi menampilkan OS dari agen, bukan tebakan browser.
+membangun. Buka utilitas Cetak label; printer dicari otomatis dan berkala. Pilih
+printer lalu klik Cetak label. Jika belum terhubung, gunakan cetak browser atau
+PDF. Tidak perlu token. Petunjuk pengguna tersedia di USAGE.md.
 Hentikan agen dengan Ctrl+C.
 
 Linux Debian/Ubuntu memerlukan `cups-client` dan layanan CUPS yang aktif.

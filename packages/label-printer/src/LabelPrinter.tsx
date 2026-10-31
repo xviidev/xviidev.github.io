@@ -1,4 +1,8 @@
-import { AGENT_RELEASE, AGENT_DOWNLOADS, detectAgentDownload } from './lib/agent-download'
+import { PrintControls } from './components/PrintControls'
+import { usePrintClient } from './lib/use-print-client'
+import { choosePrinter, choosePrintRoute, executePrint, printLimits } from './lib/print-choice'
+import type { PrintPreference } from './lib/print-choice'
+import { printInBrowser } from './lib/browser-print'
 import { agentRequest, rasterPages } from './lib/local-print'
 import { FileUpload } from '@xviidev/ui/components/file-upload'
 import { MeasurementHelp, measurementIcons } from './components/MeasurementHelp'
@@ -56,11 +60,8 @@ function download(blob: Blob, filename: string) {
 }
 
 export default function LabelPrinter() {
-  const recommendedAgent = detectAgentDownload(navigator.userAgent, navigator.maxTouchPoints)
-  const [agentVersion, setAgentVersion] = useState('auto')
-  const selectedAgent = AGENT_DOWNLOADS.find(item => item.value === agentVersion)
-  const agentDownload = selectedAgent ? { asset: selectedAgent.value, label: 'Unduh aplikasi cetak ' + selectedAgent.label } : { ...recommendedAgent, label: recommendedAgent.label.replace('Unduh agen ', 'Unduh aplikasi cetak ') }
-  const [printers, setPrinters] = useState<string[]>([]), [printer, setPrinter] = useState(''), [agentBusy, setAgentBusy] = useState(false)
+  const [printPreference, setPrintPreference] = useState<PrintPreference>('auto')
+  const [preferredPrinter, setPreferredPrinter] = useState('')
   const [mode, setMode] = useState<'manual' | 'excel'>('manual')
   const [manualText, setManualText] = useState('')
   const manualDoc = useMemo(() => fromText(manualText), [manualText])
@@ -71,6 +72,8 @@ export default function LabelPrinter() {
   const [sheetIndex, setSheetIndex] = useState(0), [header, setHeader] = useState(true)
   const [excelFile, setExcelFile] = useState<File | null>(null), [fileError, setFileError] = useState(''), [templateMessage, setTemplateMessage] = useState('')
   const [loading, setLoading] = useState(false), [exporting, setExporting] = useState(false), [printMessage, setPrintMessage] = useState('')
+  const { connection, checking, refresh } = usePrintClient(exporting)
+  const printer = choosePrinter(connection.printers, preferredPrinter)
   const [settings, setSettings] = useState<LabelSettings>({ ...DEFAULT_SETTINGS })
   const [preset, setPreset] = useState('24'), [paperChoice, setPaperChoice] = useState('a4')
   const [copies, setCopies] = useState(1), [start, setStart] = useState(1), [currentPage, setCurrentPage] = useState(0)
@@ -108,7 +111,9 @@ export default function LabelPrinter() {
   const displayedPage = Math.max(0, Math.min(currentPage, pages.length - 1))
   const canExport = ready && model !== null && pages.length > 0 && errors.length === 0 && !model.overflow.length && !model.unsupported.length && !loading && !exporting
 
-  useEffect(() => { void connectAgent() }, [])
+  const limits = printLimits(pages.length, settings.paperWidth, settings.paperHeight)
+  const printRoute = choosePrintRoute(printPreference, connection, limits)
+
   useEffect(() => { document.title = 'Cetak label — XVII Dev'; return () => { document.title = 'Utilitas — XVII Dev' } }, [])
   useEffect(() => {
     const element = previewRef.current
@@ -190,40 +195,40 @@ export default function LabelPrinter() {
       setTemplateMessage('Template dimuat. Data penerima tetap menggunakan input saat ini.')
     } catch { setTemplateMessage('Desain tidak valid. Gunakan berkas JSON dari tombol Unduh desain JSON.') }
   }
-  async function connectAgent() {
-    setAgentBusy(true)
+  async function printLabels(preference = printPreference) {
+    if (!canExport || !model || !renderState) return
+    setExporting(true); setPrintMessage('Menyiapkan label…')
+    let submitted = false
     try {
-      const info = await agentRequest('info')
-      if (!info || typeof info !== 'object' || !('os' in info) || !['windows', 'macos', 'linux'].includes(String(info.os))) throw new Error('Sistem operasi agen tidak didukung.')
-      const osName = { windows: 'Windows', macos: 'macOS', linux: 'Linux' }[String(info.os)] ?? String(info.os)
-      const result = await agentRequest('printers')
-      if (!Array.isArray(result) || !result.every(item => typeof item === 'string')) throw new Error('Respons agen tidak valid.')
-      setPrinters(result); setPrinter(result[0] ?? ''); setPrintMessage(`Pencetakan ${osName} siap. ${result.length ? 'Pilih printer, lalu klik Cetak label.' : 'Belum ada printer terpasang.'}`)
-    } catch { setPrinters([]); setPrinter(''); setPrintMessage('Aplikasi cetak belum terhubung. Jalankan aplikasi cetak di komputer ini, lalu klik Cari printer.') }
-    finally { setAgentBusy(false) }
-  }
-  async function printLocal() {
-    if (!canExport || !model || !renderState || !printer || agentBusy) return
-    setAgentBusy(true); setExporting(true); setPrintMessage('Menyiapkan pekerjaan cetak…')
-    try {
-      await agentRequest('jobs', { printer, width_mm: settings.paperWidth, height_mm: settings.paperHeight, pages: rasterPages(model, settings, renderState.fonts) })
-      setPrintMessage('Pekerjaan diteruskan ke antrean cetak sistem. Periksa printer untuk hasil cetak.')
-    } catch (error) { setPrintMessage('Status cetak belum pasti. Periksa antrean cetak sistem sebelum mencoba lagi. ' + (error instanceof Error ? error.message : '')) }
-    finally { setAgentBusy(false); setExporting(false) }
-  }
-  async function exportPdf(open: boolean) {
-    if (!canExport || !model) return
-    const viewer = open ? window.open('about:blank', '_blank') : null
-    if (viewer) viewer.opener = null
-    setExporting(true); setPrintMessage('')
-    try {
-      const { generatePdf } = await import('./lib/pdf-export')
-      const bytes = await generatePdf(model, settings, async key => (await getFont(key)).bytes)
-      const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
-      if (viewer) { const url = URL.createObjectURL(blob); viewer.location.replace(url); setTimeout(() => URL.revokeObjectURL(url), 300000) }
-      else { download(blob, 'label-siap-cetak.pdf'); if (open) setPrintMessage('PDF diunduh karena jendela baru diblokir. Buka berkas itu untuk mencetak.') }
-    } catch (error) { viewer?.close(); setPrintMessage(error instanceof Error ? error.message : 'PDF gagal dibuat. Coba kembali.') }
-    finally { setExporting(false) }
+      const result = await executePrint({
+        preference, limits, printer: preferredPrinter || printer,
+        discover: refresh,
+        client: async target => {
+          const body = { printer: target, width_mm: settings.paperWidth, height_mm: settings.paperHeight, pages: rasterPages(model, settings, renderState.fonts) }
+          if (new Blob([JSON.stringify(body)]).size > 32 * 1024 * 1024) throw new Error('Job too large')
+          submitted = true
+          await agentRequest('jobs', body)
+        },
+        browser: async () => {
+          await printInBrowser(rasterPages(model, settings, renderState.fonts), settings.paperWidth, settings.paperHeight)
+        },
+        pdf: async () => {
+          const { generatePdf } = await import('./lib/pdf-export')
+          const bytes = await generatePdf(model, settings, async key => (await getFont(key)).bytes)
+          download(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }), 'label-siap-cetak.pdf')
+        },
+      })
+      setPrintMessage({
+        client: 'Label sudah dikirim ke printer. Periksa hasil cetak sebelum mencetak lagi.',
+        browser: 'Jendela cetak browser telah dibuka. Pilih printer dan ukuran kertas yang sesuai.',
+        pdf: 'PDF siap diunduh. Buka berkasnya untuk melihat atau mencetak label.',
+        'choose-printer': 'Pilih printer terlebih dahulu, lalu klik Cetak label.',
+      }[result])
+    } catch {
+      setPrintMessage(submitted
+        ? 'Pekerjaan mungkin sudah diterima printer. Periksa antrean printer sebelum mencoba lagi agar label tidak tercetak dua kali.'
+        : 'Label belum dapat disiapkan untuk dicetak. Coba pilih Simpan PDF, atau gunakan browser lain.')
+    } finally { setExporting(false) }
   }
   return <>
     <div className="mb-6"><h1 className="mb-2 text-2xl font-medium">Cetak label</h1>
@@ -306,21 +311,12 @@ export default function LabelPrinter() {
         </CardContent></Card>
       </div>
       <section className="min-w-0 xl:sticky xl:top-20" aria-labelledby="preview-title">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="preview-title">Pratinjau</h2><div className="flex flex-wrap gap-2"><Button disabled={!canExport || !printer || agentBusy} onClick={() => { void printLocal() }}><PrinterIcon />{agentBusy ? 'Memproses…' : 'Cetak label'}</Button></div></div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="preview-title">Pratinjau</h2><div className="flex flex-wrap gap-2"><Button disabled={!canExport || (printRoute === 'client' && !printer)} onClick={() => { void printLabels() }}>{printRoute === 'pdf' ? <DownloadIcon data-icon="inline-start" /> : <PrinterIcon data-icon="inline-start" />}{exporting ? 'Menyiapkan…' : printRoute === 'pdf' ? 'Unduh PDF' : 'Cetak label'}</Button>{printRoute !== 'pdf' && <Button variant="outline" disabled={!canExport} onClick={() => { void printLabels('pdf') }}><DownloadIcon data-icon="inline-start" />Unduh PDF</Button>}</div></div>
         <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">{labelResult.labels.length} label · {pages.length} lembar · {layout.columns} kolom × {layout.rows} baris</p>
         {errors.length > 0 && <Alert variant="destructive" className="mb-4"><AlertDescription><ul className="list-disc pl-4">{errors.map(error => <li key={error}>{error}</li>)}</ul></AlertDescription></Alert>}
         {!!model?.overflow.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Isi pada label {model.overflow.slice(0, 8).map(i => i + 1).join(', ')}{model.overflow.length > 8 ? ', …' : ''} tidak muat. Kecilkan huruf atau tinggi barcode, atur posisi, atau perbesar label.</AlertDescription></Alert>}
         {!!model?.unsupported.length && <Alert variant="destructive" className="mb-4"><AlertDescription>Ada karakter yang tidak didukung font. Ganti karakter khusus atau emoji pada label {model.unsupported.slice(0, 8).map(i => i + 1).join(', ')} sebelum mengekspor.</AlertDescription></Alert>}
-        <FieldGroup className="mb-4">
-          <Field><Button variant="outline" disabled={agentBusy} onClick={() => { void connectAgent() }}>{agentBusy ? 'Mencari…' : 'Cari printer'}</Button></Field>
-          {printers.length > 0 && <Field><FieldLabel htmlFor="agent-printer">Printer</FieldLabel><SelectInput id="agent-printer" value={printer} onValueChange={setPrinter} disabled={agentBusy} options={printers.map(name => ({ value: name, label: name }))} /></Field>}
-          <p className="text-sm text-muted-foreground">Pencetakan memakai aplikasi cetak lokal. Browser dapat meminta izin jaringan lokal. Isi label diproses di komputer ini.</p>
-        </FieldGroup>
-        <Accordion className="mb-4"><AccordionItem value="install-agent"><AccordionTrigger>Unduh aplikasi cetak</AccordionTrigger><AccordionContent><FieldGroup>          <Field><FieldLabel htmlFor="agent-version">Versi unduhan</FieldLabel><SelectInput id="agent-version" value={agentVersion} onValueChange={setAgentVersion} options={[{ value: 'auto', label: 'Otomatis — ' + (recommendedAgent.asset ? recommendedAgent.label.replace('Unduh agen ', '') : 'Tidak didukung') }, ...AGENT_DOWNLOADS]} /></Field>
-          <Field>{agentDownload.asset ? <Button variant="outline" render={<a href={AGENT_RELEASE + agentDownload.asset} />} nativeButton={false}><DownloadIcon />{agentDownload.label}</Button> : <p role="status">Tidak didukung — aplikasi cetak belum tersedia untuk sistem atau arsitektur perangkat ini.</p>}</Field>
-          {agentDownload.asset && <p className="text-sm text-muted-foreground">Ekstrak unduhan, jalankan aplikasi cetak, lalu klik Cari printer. macOS: jalankan binary Intel atau Apple Silicon sesuai perangkat. Linux: jalankan xviidev-print-agent.</p>}
-          {agentDownload.asset?.includes('windows7') && <p className="text-sm text-muted-foreground">Build Windows lama bersifat eksperimental. Windows 7 memerlukan SP1, PowerShell 5.1 dan .NET Framework 4.8.</p>}
-</FieldGroup></AccordionContent></AccordionItem><AccordionItem value="manual-print"><AccordionTrigger>Unduh PDF atau cetak manual</AccordionTrigger><AccordionContent><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!canExport} onClick={() => { void exportPdf(false) }}><DownloadIcon />Unduh PDF</Button><Button variant="outline" disabled={!canExport} onClick={() => { void exportPdf(true) }}><PrinterIcon />Cetak PDF</Button></div></AccordionContent></AccordionItem></Accordion>
+        <PrintControls preference={printPreference} onPreference={value => { setPrintPreference(value); setPrintMessage('') }} connection={connection} checking={checking} printer={printer} onPrinter={value => { setPreferredPrinter(value); setPrintMessage('') }} onRefresh={() => { void refresh() }} limits={limits} busy={exporting} />
         {printMessage && <p className="hint mb-4" role="status">{printMessage}</p>}
         <div className="mb-3 flex flex-wrap items-center gap-4"><Button variant="outline" size="sm" aria-pressed={dragMode} onClick={() => setDragMode(previous => !previous)}>Geser blok teks</Button><span className="text-sm text-muted-foreground">{dragMode ? 'Geser teks di canvas. Berlaku untuk semua label.' : 'Format teks tetap mengikuti editor dan template.'}</span></div>
         <div className="border border-border bg-muted p-4"><div ref={previewRef} className="min-w-0 overflow-hidden">
